@@ -1,75 +1,50 @@
 {
   "version": "1.1",
-
   "activo": true,
-
   "modo": "automatico",
-
   "instituciones": [
-
     {
       "nombre": "SAN JOSE DE RARANGA",
-
       "amie": "01H01429",
-       "clave": "2026",
+      "clave": "2026",
       "velocidad": 1200,
-
       "modulos": {
-
         "preparatoria": true,
         "notas_tutor": true,
         "acompanamiento": true,
         "borrar_notas": true
-
       },
-
       "usuarios": [
-
         {
           "nombre": "TENE NAGUA CARLOS GUSTAVO",
-          "rol": "ADMIN"
+          "roles": ["ADMIN"]
         },
-
         {
-          "nombre": "CORTEZ SANCHEZLUZ MARIA",
-          "rol": "TUTOR"
-          "rol": "ACOMPAMIENTO"
+          "nombre": "CORTEZ SANCHEZ LUZ MARIA",
+          "roles": ["TUTOR", "ACOMPANAMIENTO"]
         },
-
         {
           "nombre": "RIVERA GUAMAN CECILIA",
-          "rol": "TUTOR"
-          "rol": "ACOMPAMIENTO"
+          "roles": ["TUTOR", "ACOMPANAMIENTO"]
         }
-
       ]
     },
-
     {
       "nombre": "UNIDAD EDUCATIVA EJEMPLO",
-
       "amie": "00H00000",
-
       "velocidad": 1500,
-
       "modulos": {
-
         "preparatoria": true,
         "notas_tutor": false,
         "acompanamiento": false,
         "borrar_notas": false
-
       },
-
       "usuarios": [
-
         {
           "nombre": "JUAN PEREZ",
-          "rol": "PREPARATORIA"
+          "roles": ["PREPARATORIA"]
         }
-
       ]
     }
-
   ]
 }
