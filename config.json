@@ -31,13 +31,15 @@
         },
 
         {
-          "nombre": "MARIA LOPEZ",
+          "nombre": "CORTEZ SANCHEZLUZ MARIA",
           "rol": "TUTOR"
+          "rol": "ACOMPAMIENTO"
         },
 
         {
-          "nombre": "ANA TORRES",
-          "rol": "PREPARATORIA"
+          "nombre": "RIVERA GUAMAN CECILIA",
+          "rol": "TUTOR"
+          "rol": "ACOMPAMIENTO"
         }
 
       ]
