@@ -1,8 +1,73 @@
 {
+  "version": "1.0",
+
   "activo": true,
-  "usuarios": [
-    "TENE NAGUA CARLOS GUSTAVO"
-  ],
-  "velocidad": 1200,
-  "modo": "automatico"
+
+  "modo": "automatico",
+
+  "instituciones": [
+
+    {
+      "nombre": "SAN JOSE DE RARANGA",
+
+      "amie": "01H01429",
+
+      "velocidad": 1200,
+
+      "modulos": {
+
+        "preparatoria": true,
+        "notas_tutor": true,
+        "acompanamiento": true,
+        "borrar_notas": true
+
+      },
+
+      "usuarios": [
+
+        {
+          "nombre": "TENE NAGUA CARLOS GUSTAVO",
+          "rol": "ADMIN"
+        },
+
+        {
+          "nombre": "MARIA LOPEZ",
+          "rol": "TUTOR"
+        },
+
+        {
+          "nombre": "ANA TORRES",
+          "rol": "PREPARATORIA"
+        }
+
+      ]
+    },
+
+    {
+      "nombre": "UNIDAD EDUCATIVA EJEMPLO",
+
+      "amie": "00H00000",
+
+      "velocidad": 1500,
+
+      "modulos": {
+
+        "preparatoria": true,
+        "notas_tutor": false,
+        "acompanamiento": false,
+        "borrar_notas": false
+
+      },
+
+      "usuarios": [
+
+        {
+          "nombre": "JUAN PEREZ",
+          "rol": "PREPARATORIA"
+        }
+
+      ]
+    }
+
+  ]
 }
