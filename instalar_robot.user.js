@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         ROBOT MAESTRO SJR - TIGAS TENE FULL PRO
+// @name         ROBOT MAESTRO - TIGA FULL PRO
 // @namespace    http://tampermonkey.net/
 // @version      23.0
-// @description  Robot Unificado con Identidad Corporativa TIGAS TENE - SIN RECORTES
+// @description  Robot Unificado con Identidad Corporativa TIGA TENE - SIN RECORTES
 // @match        *://academico.educarecuador.gob.ec/*
 // @grant        GM_xmlhttpRequest
 // @connect      raw.githubusercontent.com
