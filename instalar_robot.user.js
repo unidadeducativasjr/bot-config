@@ -1,13 +1,31 @@
 // ==UserScript==
 // @name         ROBOT MAESTRO - TIGA FULL PRO
 // @namespace    http://tampermonkey.net/
-// @version      23.0
+// @version      23.1
 // @description  Robot Unificado con Identidad Corporativa TIGA TENE - SIN RECORTES
+// @author       TIGA
 // @match        *://academico.educarecuador.gob.ec/*
+// @match        https://academico.educarecuador.gob.ec/*
+// @include      /^https?://academico\.educarecuador\.gob\.ec/.*$/
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=educarecuador.gob.ec
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @connect      raw.githubusercontent.com
-// @run-at       document-end
+// @run-at       document-start
 // ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // --- IDENTIDAD TIGA TENE ---
+    const EMPRESA = "TIGA: TENE INNOVACIÓN Y GESTIÓN ACADÉMICA";
+    // Agregamos un timestamp para evitar que el navegador guarde una versión vieja en caché
+    const CACHE_BUSTER = '?t=' + new Date().getTime();
+    const URL_LOGO = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg" + CACHE_BUSTER;
+    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json" + CACHE_BUSTER;
+
+    // El resto de tu código sigue igual...
 
 (function () {
     "use strict";
