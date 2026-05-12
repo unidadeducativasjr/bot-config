@@ -15,7 +15,7 @@
 
 (function() {
     'use strict';
-
+alert("¡El Robot está vivo!");
     console.log("Iniciando Robot Maestro...");
 
     // --- CONFIGURACIÓN DE RUTAS ---
