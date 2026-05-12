@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         ROBOT MAESTRO - TIGA FULL PRO
 // @namespace    http://tampermonkey.net/
-// @version      23.2
-// @description  Robot Unificado TIGA - SIN ERRORES DE SINTAXIS
+// @version      23.5
+// @description  Robot Unificado TIGA - Versión Final Corregida
 // @author       TIGA
 // @match        *://academico.educarecuador.gob.ec/*
 // @include      /^https?://academico\.educarecuador\.gob\.ec/.*$/
@@ -13,71 +13,22 @@
 // @run-at       document-start
 // ==/UserScript==
 
-(function() {
-    'use strict';
-alert("¡El Robot está vivo!");
-    console.log("Iniciando Robot Maestro...");
-
-   // --- CONFIGURACIÓN DE RUTAS ---
-    const v = new Date().getTime();
-    const LOGO_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?v=" + v;
-    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?v=" + v;
-
-    console.log("Robot Maestro: Rutas cargadas correctamente.");
-        GM_xmlhttpRequest({
-            method: "GET",
-            url: JSON_URL,
-            onload: function(response) {
-                try {
-                    const CONFIG = JSON.parse(response.responseText);
-                    console.log("Configuración cargada con éxito", CONFIG);
-                    // AQUÍ LLAMA A TU FUNCIÓN QUE CREA LOS BOTONES
-                    // Ejemplo: crearInterfaz(CONFIG);
-                } catch(e) {
-                    console.error("Error en el formato del JSON:", e);
-                }
-            },
-            onerror: function(err) {
-                console.error("No se pudo conectar con GitHub", err);
-            }
-        });
-    }
-
-    // Iniciar carga
-    cargarConfiguracion();
-
-})();
-(function() {
-    'use strict';
-
-    // --- IDENTIDAD TIGA TENE ---
-    const EMPRESA = "TIGA: TENE INNOVACIÓN Y GESTIÓN ACADÉMICA";
-    // Agregamos un timestamp para evitar que el navegador guarde una versión vieja en caché
-    const CACHE_BUSTER = '?t=' + new Date().getTime();
-    const URL_LOGO = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg" + CACHE_BUSTER;
-    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json" + CACHE_BUSTER;
-
-    // El resto de tu código sigue igual...
-
 (function () {
     "use strict";
 
     // --- IDENTIDAD TIGA TENE ---
     const EMPRESA = "TIGA: TENE INNOVACIÓN Y GESTIÓN ACADÉMICA";
-    
-    // Usamos una forma más limpia de añadir el tiempo para evitar el SyntaxError
     const timestamp = Date.now();
-    
     const URL_LOGO = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?v=" + timestamp;
     const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?v=" + timestamp;
-
-    console.log("URLs configuradas correctamente:", JSON_URL);
 
     let CONFIG = null, INSTITUCION = null, BASE_DATOS = {}, BASE_NOTAS_CUANTI = [];
     let PAGINA_CUANTI = 1, indiceAcompa = 0, filasProcesadasInicial = [], PROCESO_ACTIVO = false;
 
     const ESCALA_INICIAL = ["A+", "A-", "B+", "B-", "C+", "C-", "D+", "D-", "E+", "E-"];
     const MAPA_ACOMPA = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+
+    console.log("🚀 %s iniciado correctamente.", EMPRESA);
 
     // --- SEGURIDAD Y BIENVENIDA ---
     function mostrarBienvenida() {
@@ -101,13 +52,21 @@ alert("¡El Robot está vivo!");
     // --- NÚCLEO DE OPERACIÓN ---
     function iniciar() {
         GM_xmlhttpRequest({
-            method: "GET", url: JSON_URL,
+            method: "GET", 
+            url: JSON_URL,
             onload: (r) => {
-                CONFIG = JSON.parse(r.responseText);
-                const intervalo = setInterval(() => {
-                    const match = document.body.innerText.match(/\b\d{2}[A-Z]\d{5}\b/);
-                    if (match) { clearInterval(intervalo); validarAcceso(match[0]); }
-                }, 2000);
+                try {
+                    CONFIG = JSON.parse(r.responseText);
+                    const intervalo = setInterval(() => {
+                        const match = document.body.innerText.match(/\b\d{2}[A-Z]\d{5}\b/);
+                        if (match) { 
+                            clearInterval(intervalo); 
+                            validarAcceso(match[0]); 
+                        }
+                    }, 2000);
+                } catch(e) {
+                    console.error("Error al cargar configuración:", e);
+                }
             }
         });
     }
@@ -115,38 +74,65 @@ alert("¡El Robot está vivo!");
     function validarAcceso(amie) {
         INSTITUCION = CONFIG.instituciones.find(inst => inst.amie === amie);
         if (!INSTITUCION) return;
-        if (sessionStorage.getItem("auth_tigas")) { mostrarBienvenida(); colocarLogoFijo(); pintarInterfaz(); }
-        else {
+        if (sessionStorage.getItem("auth_tigas")) { 
+            mostrarBienvenida(); 
+            colocarLogoFijo(); 
+            pintarInterfaz(); 
+        } else {
             const pass = prompt(`🔐 CLAVE - ${EMPRESA}:`);
-            if (pass === (INSTITUCION.clave || "2026")) { sessionStorage.setItem("auth_tigas", "true"); mostrarBienvenida(); colocarLogoFijo(); pintarInterfaz(); }
+            if (pass === (INSTITUCION.clave || "2026")) { 
+                sessionStorage.setItem("auth_tigas", "true"); 
+                mostrarBienvenida(); 
+                colocarLogoFijo(); 
+                pintarInterfaz(); 
+            }
         }
     }
 
     function pintarInterfaz() {
-        const cont = document.createElement("div"); cont.id = "cont_sjr"; document.body.appendChild(cont);
+        if (document.getElementById("cont_sjr")) return;
+        const cont = document.createElement("div"); 
+        cont.id = "cont_sjr"; 
+        document.body.appendChild(cont);
         crearBoton("📋 ACOMPAÑAMIENTO", "#8e44ad", "140px", () => capturarExcel("ACOMPA"));
         crearBoton("🧒 ROBOT INICIAL", "#009933", "80px", () => capturarExcel("INICIAL"));
         crearBoton("🤖 NOTAS CUANTI", "#0066ff", "20px", () => capturarExcel("CUANTI"));
     }
 
     function crearBoton(txt, col, bot, accion) {
-        const b = document.createElement("button"); b.innerText = txt;
+        const b = document.createElement("button"); 
+        b.innerText = txt;
         Object.assign(b.style, { position: "fixed", bottom: bot, right: "20px", zIndex: "99999", padding: "14px", background: col, color: "white", borderRadius: "10px", fontWeight: "bold", border: "none", cursor: "pointer" });
-        b.onclick = accion; document.getElementById("cont_sjr").appendChild(b);
+        b.onclick = accion; 
+        document.getElementById("cont_sjr").appendChild(b);
     }
 
     function capturarExcel(modo) {
         if (PROCESO_ACTIVO) return;
-        let raw = prompt(`📊 MÓDULO ${modo}:`); if (!raw) return;
+        let raw = prompt(`📊 MÓDULO ${modo}:`); 
+        if (!raw) return;
         PROCESO_ACTIVO = true;
-        if (modo === "CUANTI") { BASE_NOTAS_CUANTI = raw.split(/\n/).map(x => x.trim().replace(",", ".")).filter(x => x !== ""); PAGINA_CUANTI = 1; motorCuantitativo(); }
-        else {
-            BASE_DATOS = {}; raw.split(/\n/).forEach(f => { const c = f.split(/\t/); if (c.length > 1) BASE_DATOS[c[0].trim().toUpperCase()] = c.slice(1).map(n => n.trim().toUpperCase()); });
-            if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); } else { filasProcesadasInicial = []; motorInicial(); }
+        if (modo === "CUANTI") { 
+            BASE_NOTAS_CUANTI = raw.split(/\n/).map(x => x.trim().replace(",", ".")).filter(x => x !== ""); 
+            PAGINA_CUANTI = 1; 
+            motorCuantitativo(); 
+        } else {
+            BASE_DATOS = {}; 
+            raw.split(/\n/).forEach(f => { 
+                const c = f.split(/\t/); 
+                if (c.length > 1) BASE_DATOS[c[0].trim().toUpperCase()] = c.slice(1).map(n => n.trim().toUpperCase()); 
+            });
+            if (modo === "ACOMPA") { 
+                indiceAcompa = 0; 
+                motorAcompanamiento(); 
+            } else { 
+                filasProcesadasInicial = []; 
+                motorInicial(); 
+            }
         }
     }
 
-    // --- MOTORES (Lógica Intacta) ---
+    // --- MOTORES ---
     function motorInicial() {
         const filas = Array.from(document.querySelectorAll("tr")).filter(f => Array.from(f.querySelectorAll("button")).some(b => b.innerText.toUpperCase().includes("GUARDAR")));
         if (filas.length === 0) { PROCESO_ACTIVO = false; return; }
@@ -170,10 +156,14 @@ alert("¡El Robot está vivo!");
             });
             setTimeout(() => {
                 const btnG = Array.from(fila.querySelectorAll("button")).find(b => b.innerText.toUpperCase().includes("GUARDAR"));
-                if (btnG) { btnG.click(); filasProcesadasInicial.push(nombre); setTimeout(() => {
-                    Array.from(document.querySelectorAll("button")).find(b => ["OK", "ACEPTAR", "SI", "SÍ"].includes(b.innerText.toUpperCase().trim()))?.click();
-                    procesarFilaInicial(filas, idx + 1);
-                }, 2000); } else procesarFilaInicial(filas, idx + 1);
+                if (btnG) { 
+                    btnG.click(); 
+                    filasProcesadasInicial.push(nombre); 
+                    setTimeout(() => {
+                        Array.from(document.querySelectorAll("button")).find(b => ["OK", "ACEPTAR", "SI", "SÍ"].includes(b.innerText.toUpperCase().trim()))?.click();
+                        procesarFilaInicial(filas, idx + 1);
+                    }, 2000); 
+                } else procesarFilaInicial(filas, idx + 1);
             }, INSTITUCION.velocidad || 1500);
         } else procesarFilaInicial(filas, idx + 1);
     }
@@ -184,22 +174,42 @@ alert("¡El Robot está vivo!");
         botones[indiceAcompa].click();
         setTimeout(() => {
             const selT = document.querySelector('select');
-            if (selT) { selT.selectedIndex = 1; selT.dispatchEvent(new Event('change', { bubbles: true })); setTimeout(llenarFichaAcompa, 2500); }
+            if (selT) { 
+                selT.selectedIndex = 1; 
+                selT.dispatchEvent(new Event('change', { bubbles: true })); 
+                setTimeout(llenarFichaAcompa, 2500); 
+            }
         }, 2000);
     }
 
     function llenarFichaAcompa() {
-        const inputN = document.querySelector('input[readonly], .form-control[disabled]'), nombre = (inputN?.value || inputN?.innerText || "").trim().toUpperCase();
+        const inputN = document.querySelector('input[readonly], .form-control[disabled]'), 
+              nombre = (inputN?.value || inputN?.innerText || "").trim().toUpperCase();
         const notas = BASE_DATOS[nombre];
         if (notas) {
             Array.from(document.querySelectorAll('select')).filter(s => s.innerText.includes("Seleccione")).forEach((sel, i) => {
                 const tBuscado = MAPA_ACOMPA[notas[i]];
-                if (tBuscado) { for (let opt of sel.options) { if (opt.text.trim().toUpperCase().includes(tBuscado)) { sel.value = opt.value; sel.dispatchEvent(new Event('change', { bubbles: true })); break; } } }
+                if (tBuscado) { 
+                    for (let opt of sel.options) { 
+                        if (opt.text.trim().toUpperCase().includes(tBuscado)) { 
+                            sel.value = opt.value; 
+                            sel.dispatchEvent(new Event('change', { bubbles: true })); 
+                            break; 
+                        } 
+                    } 
+                }
             });
-            setTimeout(() => { document.querySelector('button.btn-success, button.btn-primary')?.click(); setTimeout(() => {
-                const btnV = Array.from(document.querySelectorAll('button')).find(btn => btn.innerText.includes("Volver"));
-                if (btnV) { btnV.click(); indiceAcompa++; setTimeout(motorAcompanamiento, 3500); }
-            }, 2500); }, 1200);
+            setTimeout(() => { 
+                document.querySelector('button.btn-success, button.btn-primary')?.click(); 
+                setTimeout(() => {
+                    const btnV = Array.from(document.querySelectorAll('button')).find(btn => btn.innerText.includes("Volver"));
+                    if (btnV) { 
+                        btnV.click(); 
+                        indiceAcompa++; 
+                        setTimeout(motorAcompanamiento, 3500); 
+                    }
+                }, 2500); 
+            }, 1200);
         }
     }
 
@@ -209,8 +219,13 @@ alert("¡El Robot está vivo!");
             if (idx >= filas.length) { saltarPagina("CUANTI"); return; }
             const input = filas[idx].querySelector("input"), nota = BASE_NOTAS_CUANTI[offset + idx];
             if (input && nota) {
-                input.focus(); input.value = nota; ["input", "change"].forEach(ev => input.dispatchEvent(new Event(ev, { bubbles: true })));
-                setTimeout(() => { Array.from(filas[idx].querySelectorAll("button")).find(b => b.innerText.toUpperCase().includes("GUARDAR"))?.click(); setTimeout(() => procesar(idx + 1), 1800); }, 1000);
+                input.focus(); 
+                input.value = nota; 
+                ["input", "change"].forEach(ev => input.dispatchEvent(new Event(ev, { bubbles: true })));
+                setTimeout(() => { 
+                    Array.from(filas[idx].querySelectorAll("button")).find(b => b.innerText.toUpperCase().includes("GUARDAR"))?.click(); 
+                    setTimeout(() => procesar(idx + 1), 1800); 
+                }, 1000);
             } else procesar(idx + 1);
         }
         procesar(0);
@@ -218,8 +233,17 @@ alert("¡El Robot está vivo!");
 
     function saltarPagina(modo) {
         const sig = Array.from(document.querySelectorAll("button, a")).find(b => b.innerText.toUpperCase().includes("SIGUIENTE") && !b.disabled);
-        if (sig) { sig.click(); setTimeout(() => { if (modo === "INICIAL") motorInicial(); else if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); } else { PAGINA_CUANTI++; motorCuantitativo(); } }, 5500); }
-        else { PROCESO_ACTIVO = false; alert("🏁 PROCESO FINALIZADO"); }
+        if (sig) { 
+            sig.click(); 
+            setTimeout(() => { 
+                if (modo === "INICIAL") motorInicial(); 
+                else if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); } 
+                else { PAGINA_CUANTI++; motorCuantitativo(); } 
+            }, 5500); 
+        } else { 
+            PROCESO_ACTIVO = false; 
+            alert("🏁 PROCESO FINALIZADO"); 
+        }
     }
 
     iniciar();
