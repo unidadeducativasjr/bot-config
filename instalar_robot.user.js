@@ -65,8 +65,14 @@
 
     // --- IDENTIDAD TIGA TENE ---
     const EMPRESA = "TIGA: TENE INNOVACIÓN Y GESTIÓN ACADÉMICA";
-    const URL_LOGO = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%206.51.35%20PM.jpeg";
-    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json";
+    
+    // Usamos una forma más limpia de añadir el tiempo para evitar el SyntaxError
+    const timestamp = Date.now();
+    
+    const URL_LOGO = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?v=" + timestamp;
+    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?v=" + timestamp;
+
+    console.log("URLs configuradas correctamente:", JSON_URL);
 
     let CONFIG = null, INSTITUCION = null, BASE_DATOS = {}, BASE_NOTAS_CUANTI = [];
     let PAGINA_CUANTI = 1, indiceAcompa = 0, filasProcesadasInicial = [], PROCESO_ACTIVO = false;
