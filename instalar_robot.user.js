@@ -18,10 +18,9 @@
 alert("¡El Robot está vivo!");
     console.log("Iniciando Robot Maestro...");
 
-    // --- CONFIGURACIÓN DE RUTAS ---
-    const t = new Date().getTime();
-    const LOGO_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?t=" + t;
-    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?t=" + t;
+   const t = new Date().getTime();
+    const LOGO_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?v=" + t;
+    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?v=" + t;
 
     // --- FUNCIÓN DE CARGA ---
     function cargarConfiguracion() {
