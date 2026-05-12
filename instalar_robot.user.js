@@ -1,13 +1,11 @@
 // ==UserScript==
 // @name         ROBOT MAESTRO - TIGA FULL PRO
 // @namespace    http://tampermonkey.net/
-// @version      23.1
-// @description  Robot Unificado con Identidad Corporativa TIGA TENE - SIN RECORTES
+// @version      23.2
+// @description  Robot Unificado TIGA - SIN ERRORES DE SINTAXIS
 // @author       TIGA
 // @match        *://academico.educarecuador.gob.ec/*
-// @match        https://academico.educarecuador.gob.ec/*
 // @include      /^https?://academico\.educarecuador\.gob\.ec/.*$/
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=educarecuador.gob.ec
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -15,6 +13,41 @@
 // @run-at       document-start
 // ==/UserScript==
 
+(function() {
+    'use strict';
+
+    console.log("Iniciando Robot Maestro...");
+
+    // --- CONFIGURACIÓN DE RUTAS ---
+    const t = new Date().getTime();
+    const LOGO_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?t=" + t;
+    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?t=" + t;
+
+    // --- FUNCIÓN DE CARGA ---
+    function cargarConfiguracion() {
+        GM_xmlhttpRequest({
+            method: "GET",
+            url: JSON_URL,
+            onload: function(response) {
+                try {
+                    const CONFIG = JSON.parse(response.responseText);
+                    console.log("Configuración cargada con éxito", CONFIG);
+                    // AQUÍ LLAMA A TU FUNCIÓN QUE CREA LOS BOTONES
+                    // Ejemplo: crearInterfaz(CONFIG);
+                } catch(e) {
+                    console.error("Error en el formato del JSON:", e);
+                }
+            },
+            onerror: function(err) {
+                console.error("No se pudo conectar con GitHub", err);
+            }
+        });
+    }
+
+    // Iniciar carga
+    cargarConfiguracion();
+
+})();
 (function() {
     'use strict';
 
