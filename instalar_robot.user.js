@@ -18,12 +18,12 @@
 alert("¡El Robot está vivo!");
     console.log("Iniciando Robot Maestro...");
 
-   const t = new Date().getTime();
-    const LOGO_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?v=" + t;
-    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?v=" + t;
+   // --- CONFIGURACIÓN DE RUTAS ---
+    const v = new Date().getTime();
+    const LOGO_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?v=" + v;
+    const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?v=" + v;
 
-    // --- FUNCIÓN DE CARGA ---
-    function cargarConfiguracion() {
+    console.log("Robot Maestro: Rutas cargadas correctamente.");
         GM_xmlhttpRequest({
             method: "GET",
             url: JSON_URL,
