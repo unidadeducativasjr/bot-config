@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         ROBOT MAESTRO - TIGA FULL PRO
-// @namespace    http://tampermonkey.net/
-// @version      23.5
-// @description  Robot Unificado TIGA - Versión Final Corregida
+// @namespace    TIGA_INNOVACION_GESTION
+// @version      23.6
+// @description  Robot Unificado TIGA - Con Módulo de Eliminación y Guardado Seguro
 // @author       TIGA
 // @match        *://academico.educarecuador.gob.ec/*
 // @include      /^https?://academico\.educarecuador\.gob\.ec/.*$/
@@ -28,24 +28,24 @@
     const ESCALA_INICIAL = ["A+", "A-", "B+", "B-", "C+", "C-", "D+", "D-", "E+", "E-"];
     const MAPA_ACOMPA = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
 
-    console.log("🚀 %s iniciado correctamente.", EMPRESA);
+    console.log("🚀 %s iniciado con Módulo de Eliminación.", EMPRESA);
 
     // --- SEGURIDAD Y BIENVENIDA ---
     function mostrarBienvenida() {
-        console.clear();
-        console.log(`%c 🚀 ${EMPRESA} `, 'background: #2c3e50; color: #fff; font-size: 18px; font-weight: bold; padding: 10px; border-radius: 5px;');
+        if (document.getElementById("tiga_banner")) return;
         const banner = document.createElement("div");
+        banner.id = "tiga_banner";
         banner.innerHTML = `<img src="${URL_LOGO}" style="height: 100px; margin-bottom: 15px; border-radius: 10px;"><div style="font-weight: bold; font-size: 18px;">${EMPRESA}</div>`;
         Object.assign(banner.style, { position: "fixed", top: "50px", left: "50%", transform: "translateX(-50%)", backgroundColor: "#2c3e50", color: "white", padding: "25px 50px", borderRadius: "20px", zIndex: "1000000", textAlign: "center", boxShadow: "0 20px 50px rgba(0,0,0,0.7)", border: "2px solid #34495e" });
         document.body.appendChild(banner);
-        setTimeout(() => { banner.style.opacity = "0"; setTimeout(() => banner.remove(), 600); }, 4500);
+        setTimeout(() => { banner.style.opacity = "0"; setTimeout(() => banner.remove(), 600); }, 3500);
     }
 
     function colocarLogoFijo() {
         if (document.getElementById("tigas_logo_fijo")) return;
         const mini = document.createElement("img");
         mini.id = "tigas_logo_fijo"; mini.src = URL_LOGO;
-        Object.assign(mini.style, { position: "fixed", bottom: "200px", right: "25px", width: "70px", zIndex: "99999", borderRadius: "8px", filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.4))" });
+        Object.assign(mini.style, { position: "fixed", bottom: "250px", right: "25px", width: "70px", zIndex: "99999", borderRadius: "8px", filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.4))" });
         document.body.appendChild(mini);
     }
 
@@ -64,9 +64,7 @@
                             validarAcceso(match[0]); 
                         }
                     }, 2000);
-                } catch(e) {
-                    console.error("Error al cargar configuración:", e);
-                }
+                } catch(e) { console.error("Error al cargar configuración:", e); }
             }
         });
     }
@@ -75,16 +73,12 @@
         INSTITUCION = CONFIG.instituciones.find(inst => inst.amie === amie);
         if (!INSTITUCION) return;
         if (sessionStorage.getItem("auth_tigas")) { 
-            mostrarBienvenida(); 
-            colocarLogoFijo(); 
-            pintarInterfaz(); 
+            mostrarBienvenida(); colocarLogoFijo(); pintarInterfaz(); 
         } else {
             const pass = prompt(`🔐 CLAVE - ${EMPRESA}:`);
             if (pass === (INSTITUCION.clave || "2026")) { 
                 sessionStorage.setItem("auth_tigas", "true"); 
-                mostrarBienvenida(); 
-                colocarLogoFijo(); 
-                pintarInterfaz(); 
+                mostrarBienvenida(); colocarLogoFijo(); pintarInterfaz(); 
             }
         }
     }
@@ -94,17 +88,51 @@
         const cont = document.createElement("div"); 
         cont.id = "cont_sjr"; 
         document.body.appendChild(cont);
+        
+        // Botones Principales
         crearBoton("📋 ACOMPAÑAMIENTO", "#8e44ad", "140px", () => capturarExcel("ACOMPA"));
         crearBoton("🧒 ROBOT INICIAL", "#009933", "80px", () => capturarExcel("INICIAL"));
         crearBoton("🤖 NOTAS CUANTI", "#0066ff", "20px", () => capturarExcel("CUANTI"));
+        
+        // BOTÓN ELIMINAR (ROJO)
+        crearBoton("🗑️ ELIMINAR TODO", "#cc0000", "200px", () => iniciarEliminacion());
     }
 
     function crearBoton(txt, col, bot, accion) {
         const b = document.createElement("button"); 
         b.innerText = txt;
-        Object.assign(b.style, { position: "fixed", bottom: bot, right: "20px", zIndex: "99999", padding: "14px", background: col, color: "white", borderRadius: "10px", fontWeight: "bold", border: "none", cursor: "pointer" });
+        Object.assign(b.style, { position: "fixed", bottom: bot, right: "20px", zIndex: "99999", padding: "12px", background: col, color: "white", borderRadius: "10px", fontWeight: "bold", border: "none", cursor: "pointer", boxShadow: "0 4px 8px rgba(0,0,0,0.3)" });
         b.onclick = accion; 
         document.getElementById("cont_sjr").appendChild(b);
+    }
+
+    // --- MÓDULO DE ELIMINACIÓN ---
+    function iniciarEliminacion() {
+        if (!confirm("⚠️ ¿ESTÁS SEGURO? Se borrarán TODAS las notas cargadas en esta vista.")) return;
+        const dobleCheck = prompt("Escriba 'BORRAR' para confirmar:");
+        if (dobleCheck !== "BORRAR") return;
+        
+        PROCESO_ACTIVO = true;
+        const filas = Array.from(document.querySelectorAll("tr")).filter(f => f.querySelector("input, select"));
+        
+        function borrarAlumno(idx) {
+            if (idx >= filas.length) { alert("✅ LIMPIEZA TERMINADA"); location.reload(); return; }
+            
+            const inputs = filas[idx].querySelectorAll("input, select");
+            inputs.forEach(el => {
+                el.value = "";
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            setTimeout(() => {
+                const btnG = Array.from(filas[idx].querySelectorAll("button")).find(b => b.innerText.toUpperCase().includes("GUARDAR"));
+                if (btnG) {
+                    btnG.click();
+                    setTimeout(() => borrarAlumno(idx + 1), 2200); // Espera de seguridad
+                } else borrarAlumno(idx + 1);
+            }, 1000);
+        }
+        borrarAlumno(0);
     }
 
     function capturarExcel(modo) {
@@ -122,17 +150,12 @@
                 const c = f.split(/\t/); 
                 if (c.length > 1) BASE_DATOS[c[0].trim().toUpperCase()] = c.slice(1).map(n => n.trim().toUpperCase()); 
             });
-            if (modo === "ACOMPA") { 
-                indiceAcompa = 0; 
-                motorAcompanamiento(); 
-            } else { 
-                filasProcesadasInicial = []; 
-                motorInicial(); 
-            }
+            if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); } 
+            else { filasProcesadasInicial = []; motorInicial(); }
         }
     }
 
-    // --- MOTORES ---
+    // --- MOTORES ACTUALIZADOS CON MÁS ESPERA PARA GUARDADO SEGURO ---
     function motorInicial() {
         const filas = Array.from(document.querySelectorAll("tr")).filter(f => Array.from(f.querySelectorAll("button")).some(b => b.innerText.toUpperCase().includes("GUARDAR")));
         if (filas.length === 0) { PROCESO_ACTIVO = false; return; }
@@ -162,9 +185,9 @@
                     setTimeout(() => {
                         Array.from(document.querySelectorAll("button")).find(b => ["OK", "ACEPTAR", "SI", "SÍ"].includes(b.innerText.toUpperCase().trim()))?.click();
                         procesarFilaInicial(filas, idx + 1);
-                    }, 2000); 
+                    }, 2500); // Aumentado para asegurar guardado
                 } else procesarFilaInicial(filas, idx + 1);
-            }, INSTITUCION.velocidad || 1500);
+            }, 2000);
         } else procesarFilaInicial(filas, idx + 1);
     }
 
@@ -177,9 +200,9 @@
             if (selT) { 
                 selT.selectedIndex = 1; 
                 selT.dispatchEvent(new Event('change', { bubbles: true })); 
-                setTimeout(llenarFichaAcompa, 2500); 
+                setTimeout(llenarFichaAcompa, 2800); 
             }
-        }, 2000);
+        }, 2500);
     }
 
     function llenarFichaAcompa() {
@@ -206,10 +229,10 @@
                     if (btnV) { 
                         btnV.click(); 
                         indiceAcompa++; 
-                        setTimeout(motorAcompanamiento, 3500); 
+                        setTimeout(motorAcompanamiento, 4000); // Aumentado para estabilidad del servidor
                     }
-                }, 2500); 
-            }, 1200);
+                }, 3000); 
+            }, 1500);
         }
     }
 
@@ -224,8 +247,8 @@
                 ["input", "change"].forEach(ev => input.dispatchEvent(new Event(ev, { bubbles: true })));
                 setTimeout(() => { 
                     Array.from(filas[idx].querySelectorAll("button")).find(b => b.innerText.toUpperCase().includes("GUARDAR"))?.click(); 
-                    setTimeout(() => procesar(idx + 1), 1800); 
-                }, 1000);
+                    setTimeout(() => procesar(idx + 1), 2500); // Aumentado para asegurar día 11 y otros
+                }, 1200);
             } else procesar(idx + 1);
         }
         procesar(0);
@@ -239,7 +262,7 @@
                 if (modo === "INICIAL") motorInicial(); 
                 else if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); } 
                 else { PAGINA_CUANTI++; motorCuantitativo(); } 
-            }, 5500); 
+            }, 6000); 
         } else { 
             PROCESO_ACTIVO = false; 
             alert("🏁 PROCESO FINALIZADO"); 
