@@ -130,9 +130,33 @@ async function ejecutarAcompanamiento() {
     // DETECTAR SI ESTAMOS EN LISTA
     // =========================================
 
-    const alumnoAbierto = document.querySelector(
-        'input[readonly], .form-control[disabled]'
-    );
+    // =========================================
+// DETECTAR SI YA ESTAMOS DENTRO DEL ALUMNO
+// =========================================
+
+let alumnoAbierto = null;
+
+// INPUTS CON NOMBRE
+const posiblesInputs = Array.from(
+    document.querySelectorAll("input")
+);
+
+for (let inp of posiblesInputs) {
+
+    const val =
+        (inp.value || "")
+        .trim();
+
+    if (
+        val.length > 5 &&
+        val.includes(" ")
+    ) {
+
+        alumnoAbierto = inp;
+
+        break;
+    }
+}
 
     // =========================================
     // SI ESTÁ EN LA TABLA
