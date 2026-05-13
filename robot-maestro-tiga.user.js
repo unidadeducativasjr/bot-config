@@ -116,97 +116,273 @@ const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-confi
         }
     }
 
-    /* --- FUNCIÓN DE ACOMPAÑAMIENTO ADAPTADA DE TU CÓDIGO EXITOSO --- */
-async function ejecutarAcompanamiento() {
-    // 1. Verificar Institución (Como en tu código original)
-    const NOMBRE_IE = "SAN JOSE DE RARANGA";
-    if (!document.body.innerText.includes(NOMBRE_IE)) {
-        alert("❌ Acceso Denegado: U.E. San José de Raranga");
+   // =====================================================
+// MOTOR ACOMPAÑAMIENTO AUTOMÁTICO
+// =====================================================
+
+async function motorAcompanamiento() {
+
+    console.log("🚀 INICIANDO ACOMPAÑAMIENTO");
+
+    // =========================================
+    // BUSCAR BOTONES SELECCIONAR
+    // =========================================
+
+    const botonesSeleccionar = Array.from(
+        document.querySelectorAll("button")
+    ).filter(b =>
+        b.innerText.toUpperCase().includes("SELECCIONAR")
+    );
+
+    // SI HAY BOTONES → ENTRAR AL PRIMERO
+
+    if (botonesSeleccionar.length > 0) {
+
+        console.log("📋 ALUMNOS:",
+            botonesSeleccionar.length
+        );
+
+        botonesSeleccionar[0].click();
+
+        setTimeout(() => {
+            motorAcompanamiento();
+        }, 5000);
+
         return;
     }
 
-    // 2. Cargar datos desde el CONFIG de GitHub (En lugar del prompt de Excel)
-    if (!CONFIG || !CONFIG.acompanamiento_mapa) {
-        alert("❌ No hay datos en GitHub. Asegúrate de que el JSON tenga la clave 'acompanamiento_mapa'");
-        return;
-    }
+    // =========================================
+    // DENTRO DEL ALUMNO
+    // =========================================
 
-    const baseDatos = CONFIG.acompanamiento_mapa;
+    const inputNombre = document.querySelector(
+        'input[readonly], .form-control[disabled]'
+    );
 
-    // 3. Identificar alumno abierto (Tu lógica exacta)
-    const inputNombre = document.querySelector('input[readonly], .form-control[disabled]');
     if (!inputNombre) {
-        alert("❌ Abre primero a un alumno con 'Seleccionar'.");
+
+        console.log("❌ NO ENCONTRÉ NOMBRE");
+
+        setTimeout(() => {
+            motorAcompanamiento();
+        }, 3000);
+
         return;
     }
 
-    const nombrePantalla = inputNombre.value.trim().toUpperCase();
-    const misNotas = baseDatos[nombrePantalla];
+    const nombrePantalla =
+        inputNombre.value
+        .trim()
+        .toUpperCase();
+
+    console.log("👨‍🎓", nombrePantalla);
+
+    // =========================================
+    // BUSCAR EN EXCEL
+    // =========================================
+
+    const misNotas =
+        BASE_DATOS[nombrePantalla];
 
     if (!misNotas) {
-        alert("❓ No encontré a '" + nombrePantalla + "' en la lista de GitHub.");
+
+        console.log("⚠️ NO EXISTE EN EXCEL");
+
+        volverLista();
+
         return;
     }
 
-    // 4. Llenar Habilidades (Mapa de texto de tu código)
-    const mapaTexto = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+    console.log("✅ NOTAS:", misNotas);
 
-    // Selector mejorado para Angular/Material o Select normal
-    const selects = Array.from(document.querySelectorAll('select, mat-select'));
+    // =========================================
+    // MAPA
+    // =========================================
 
-    console.log("🚀 Llenando notas para: " + nombrePantalla);
+    const mapaTexto = {
+        "S": "SIEMPRE",
+        "F": "FRECUENTEMENTE",
+        "O": "OCASIONALMENTE",
+        "N": "NUNCA"
+    };
+
+    // =========================================
+    // SELECTS
+    // =========================================
+
+    const selects = Array.from(
+        document.querySelectorAll("select")
+    );
+
+    console.log("🎯 SELECTS:",
+        selects.length
+    );
 
     for (let i = 0; i < selects.length; i++) {
-        const sel = selects[i];
-        const notaLetra = misNotas[i];
-        const textoLargo = mapaTexto[notaLetra];
 
-        if (textoLargo) {
-            // Si es un SELECT tradicional (como el de tu código)
-            if (sel.tagName === 'SELECT') {
-                for (let opt of sel.options) {
-                    if (opt.text.trim() === textoLargo) {
-                        sel.value = opt.value;
-                        sel.dispatchEvent(new Event('change', { bubbles: true }));
-                        break;
-                    }
-                }
-            }
-            // Si es un MAT-SELECT (Angular), usamos el clic real que repara el guardado
-            else {
-                sel.click();
-                await new Promise(r => setTimeout(r, 400));
-                const opciones = document.querySelectorAll('mat-option');
-                for (let opt of opciones) {
-                    if (opt.innerText.trim() === textoLargo) {
-                        opt.click();
-                        break;
-                    }
-                }
+        const sel = selects[i];
+
+        const letra =
+            (misNotas[i] || "")
+            .trim()
+            .toUpperCase();
+
+        const texto =
+            mapaTexto[letra];
+
+        if (!texto) continue;
+
+        console.log("➡️",
+            i + 1,
+            texto
+        );
+
+        for (let opt of sel.options) {
+
+            if (
+                opt.text
+                .trim()
+                .toUpperCase()
+                .includes(texto)
+            ) {
+
+                sel.value = opt.value;
+
+                [
+                    "input",
+                    "change",
+                    "blur"
+                ].forEach(ev => {
+
+                    sel.dispatchEvent(
+                        new Event(ev, {
+                            bubbles: true
+                        })
+                    );
+
+                });
+
+                break;
             }
         }
+
+        await esperar(400);
     }
 
-    // 5. GUARDADO Y REGRESO AUTOMÁTICO (Tu lógica de 1 y 2 segundos)
-    setTimeout(() => {
-        const btnGuardar = document.querySelector('button.btn-primary, .btn-success, button[type="submit"]');
-        if (btnGuardar) {
-            console.log("💾 Guardando automáticamente...");
-            btnGuardar.click();
+    // =========================================
+    // GUARDAR
+    // =========================================
 
-            setTimeout(() => {
-                const botones = document.querySelectorAll('button, a.btn');
-                let botonVolver = Array.from(botones).find(b =>
-                    b.innerText.toUpperCase().includes("VOLVER") ||
-                    b.innerText.toUpperCase().includes("REGRESAR") ||
-                    b.innerText.toUpperCase().includes("ATRÁS")
-                );
-                if (botonVolver) {
-                    botonVolver.click();
-                }
-            }, 2000);
+    const btnGuardar = Array.from(
+        document.querySelectorAll("button")
+    ).find(b =>
+        b.innerText
+        .toUpperCase()
+        .includes("GUARDAR")
+    );
+
+    if (btnGuardar) {
+
+        console.log("💾 GUARDANDO");
+
+        btnGuardar.click();
+
+        await esperar(2500);
+
+        cerrarPopups();
+
+        await esperar(1500);
+
+        volverLista();
+
+    } else {
+
+        console.log("❌ NO ENCONTRÉ GUARDAR");
+
+        volverLista();
+    }
+}
+
+// =====================================================
+// VOLVER
+// =====================================================
+
+function volverLista() {
+
+    const btnVolver = Array.from(
+        document.querySelectorAll("button")
+    ).find(b => {
+
+        const t =
+            b.innerText
+            .trim()
+            .toUpperCase();
+
+        return (
+            t.includes("VOLVER") ||
+            t.includes("REGRESAR") ||
+            t.includes("ATRÁS")
+        );
+    });
+
+    if (btnVolver) {
+
+        console.log("↩️ VOLVIENDO");
+
+        btnVolver.click();
+
+        setTimeout(() => {
+            motorAcompanamiento();
+        }, 5000);
+
+    } else {
+
+        console.log("🏁 FINALIZADO");
+
+        PROCESO_ACTIVO = false;
+
+        alert(
+            "✅ ACOMPAÑAMIENTO FINALIZADO"
+        );
+    }
+}
+
+// =====================================================
+// CERRAR POPUPS
+// =====================================================
+
+function cerrarPopups() {
+
+    Array.from(
+        document.querySelectorAll("button")
+    ).forEach(btn => {
+
+        const t =
+            btn.innerText
+            .trim()
+            .toUpperCase();
+
+        if (
+            t === "ACEPTAR" ||
+            t === "OK" ||
+            t === "SI" ||
+            t === "SÍ"
+        ) {
+
+            btn.click();
         }
-    }, 1000);
+    });
+}
+
+// =====================================================
+// ESPERA
+// =====================================================
+
+function esperar(ms) {
+
+    return new Promise(r =>
+        setTimeout(r, ms)
+    );
 }
     // --- 5. MOTOR INICIAL ---
     function motorInicial() {
