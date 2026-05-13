@@ -15,7 +15,52 @@
 
 (function () {
     "use strict";
+// ======================================
+// BLOQUEAR ERRORES VISUALES ANGULAR
+// ======================================
 
+window.addEventListener("error", function(e) {
+
+    const msg = (
+        e.message || ""
+    ).toLowerCase();
+
+    if (
+        msg.includes("filter") ||
+        msg.includes("undefined")
+    ) {
+
+        console.log(
+            "⚠️ ERROR ANGULAR IGNORADO"
+        );
+
+        e.preventDefault();
+
+        return true;
+    }
+});
+
+window.addEventListener(
+    "unhandledrejection",
+    function(e) {
+
+        const msg = String(
+            e.reason || ""
+        ).toLowerCase();
+
+        if (
+            msg.includes("filter") ||
+            msg.includes("undefined")
+        ) {
+
+            console.log(
+                "⚠️ PROMESA ANGULAR IGNORADA"
+            );
+
+            e.preventDefault();
+        }
+    }
+);
     // --- CONFIGURACIÓN E IDENTIDAD ---
     const EMPRESA = "TIGA: TENE INNOVACIÓN Y GESTIÓN ACADÉMICA";
     const timestamp = Date.now();
