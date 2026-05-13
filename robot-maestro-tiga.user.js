@@ -116,274 +116,84 @@ const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-confi
         }
     }
 
-   // =====================================================
-// MOTOR ACOMPAÑAMIENTO AUTOMÁTICO
-// =====================================================
+   /* --- MOTOR DE ACOMPAÑAMIENTO TOTALMENTE AUTÓNOMO --- */
+async function ejecutarAcompanamiento() {
+    console.log("🚀 INICIANDO ACOMPAÑAMIENTO...");
 
-async function motorAcompanamiento() {
+    // 1. AUTO-SELECCIÓN SI ESTÁ EN LA TABLA
+    const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
+    if (!alumnoAbierto) {
+        // Busca el primer botón naranja "Seleccionar"
+        const btnSeleccionar = document.querySelector('button.mat-raised-button.mat-primary');
+        if (btnSeleccionar) {
+            console.log("🖱️ Seleccionando alumno automáticamente...");
+            btnSeleccionar.click();
+            // Espera 2 segundos a que cargue la ficha antes de reintentar
+            setTimeout(() => ejecutarAcompanamiento(), 2000);
+            return;
+        } else {
+            console.warn("⚠️ No se encontró botón Seleccionar. ¿Estás en la página correcta?");
+            return;
+        }
+    }
 
-    console.log("🚀 INICIANDO ACOMPAÑAMIENTO");
-
-    // =========================================
-    // BUSCAR BOTONES SELECCIONAR
-    // =========================================
-
-    const botonesSeleccionar = Array.from(
-        document.querySelectorAll("button")
-    ).filter(b =>
-        b.innerText.toUpperCase().includes("SELECCIONAR")
-    );
-
-    // SI HAY BOTONES → ENTRAR AL PRIMERO
-
-    if (botonesSeleccionar.length > 0) {
-
-        console.log("📋 ALUMNOS:",
-            botonesSeleccionar.length
-        );
-
-        botonesSeleccionar[0].click();
-
-        setTimeout(() => {
-            motorAcompanamiento();
-        }, 5000);
-
+    // 2. VALIDACIÓN DE DATOS DESDE GITHUB
+    if (!CONFIG || !CONFIG.acompanamiento_mapa) {
+        alert("❌ Error: No hay 'acompanamiento_mapa' en config.json");
         return;
     }
 
-    // =========================================
-    // DENTRO DEL ALUMNO
-    // =========================================
+    const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
+    const notas = CONFIG.acompanamiento_mapa[nombreAlumno];
 
-    const inputNombre = document.querySelector(
-        'input[readonly], .form-control[disabled]'
-    );
-
-    if (!inputNombre) {
-
-        console.log("❌ NO ENCONTRÉ NOMBRE");
-
-        setTimeout(() => {
-            motorAcompanamiento();
-        }, 3000);
-
+    if (!notas) {
+        alert("❓ No encontré notas para: " + nombreAlumno);
         return;
     }
 
-    const nombrePantalla =
-        inputNombre.value
-        .trim()
-        .toUpperCase();
-
-    console.log("👨‍🎓", nombrePantalla);
-
-    // =========================================
-    // BUSCAR EN EXCEL
-    // =========================================
-
-    const misNotas =
-        BASE_DATOS[nombrePantalla];
-
-    if (!misNotas) {
-
-        console.log("⚠️ NO EXISTE EN EXCEL");
-
-        volverLista();
-
-        return;
-    }
-
-    console.log("✅ NOTAS:", misNotas);
-
-    // =========================================
-    // MAPA
-    // =========================================
-
-    const mapaTexto = {
-        "S": "SIEMPRE",
-        "F": "FRECUENTEMENTE",
-        "O": "OCASIONALMENTE",
-        "N": "NUNCA"
-    };
-
-    // =========================================
-    // SELECTS
-    // =========================================
-
-    const selects = Array.from(
-        document.querySelectorAll("select")
-    );
-
-    console.log("🎯 SELECTS:",
-        selects.length
-    );
+    // 3. LLENADO CON CLICS REALES (Para activar el botón Guardar)
+    const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+    const selects = Array.from(document.querySelectorAll('mat-select'));
 
     for (let i = 0; i < selects.length; i++) {
-
-        const sel = selects[i];
-
-        const letra =
-            (misNotas[i] || "")
-            .trim()
-            .toUpperCase();
-
-        const texto =
-            mapaTexto[letra];
-
-        if (!texto) continue;
-
-        console.log("➡️",
-            i + 1,
-            texto
-        );
-
-        for (let opt of sel.options) {
-
-            if (
-                opt.text
-                .trim()
-                .toUpperCase()
-                .includes(texto)
-            ) {
-
-                sel.value = opt.value;
-
-                [
-                    "input",
-                    "change",
-                    "blur"
-                ].forEach(ev => {
-
-                    sel.dispatchEvent(
-                        new Event(ev, {
-                            bubbles: true
-                        })
-                    );
-
-                });
-
-                break;
+        const textoObjetivo = mapa[notas[i]];
+        if (textoObjetivo) {
+            selects[i].click(); // Abre el menú
+            await new Promise(r => setTimeout(r, 500)); // Espera a que aparezcan las opciones
+            
+            const opciones = Array.from(document.querySelectorAll('mat-option'));
+            const opcionCorrecta = opciones.find(opt => opt.innerText.trim() === textoObjetivo);
+            
+            if (opcionCorrecta) {
+                opcionCorrecta.click(); // Selecciona
+                console.log(`✅ ${nombreAlumno}: Nota ${i+1} puesta.`);
             }
+            await new Promise(r => setTimeout(r, 300));
         }
-
-        await esperar(400);
     }
 
-    // =========================================
-    // GUARDAR
-    // =========================================
-
-    const btnGuardar = Array.from(
-        document.querySelectorAll("button")
-    ).find(b =>
-        b.innerText
-        .toUpperCase()
-        .includes("GUARDAR")
-    );
-
-    if (btnGuardar) {
-
-        console.log("💾 GUARDANDO");
-
-        btnGuardar.click();
-
-        await esperar(2500);
-
-        cerrarPopups();
-
-        await esperar(1500);
-
-        volverLista();
-
-    } else {
-
-        console.log("❌ NO ENCONTRÉ GUARDAR");
-
-        volverLista();
-    }
-}
-
-// =====================================================
-// VOLVER
-// =====================================================
-
-function volverLista() {
-
-    const btnVolver = Array.from(
-        document.querySelectorAll("button")
-    ).find(b => {
-
-        const t =
-            b.innerText
-            .trim()
-            .toUpperCase();
-
-        return (
-            t.includes("VOLVER") ||
-            t.includes("REGRESAR") ||
-            t.includes("ATRÁS")
-        );
-    });
-
-    if (btnVolver) {
-
-        console.log("↩️ VOLVIENDO");
-
-        btnVolver.click();
-
-        setTimeout(() => {
-            motorAcompanamiento();
-        }, 5000);
-
-    } else {
-
-        console.log("🏁 FINALIZADO");
-
-        PROCESO_ACTIVO = false;
-
-        alert(
-            "✅ ACOMPAÑAMIENTO FINALIZADO"
-        );
-    }
-}
-
-// =====================================================
-// CERRAR POPUPS
-// =====================================================
-
-function cerrarPopups() {
-
-    Array.from(
-        document.querySelectorAll("button")
-    ).forEach(btn => {
-
-        const t =
-            btn.innerText
-            .trim()
-            .toUpperCase();
-
-        if (
-            t === "ACEPTAR" ||
-            t === "OK" ||
-            t === "SI" ||
-            t === "SÍ"
-        ) {
-
-            btn.click();
+    // 4. GUARDADO Y REGRESO AUTOMÁTICO
+    setTimeout(() => {
+        const btnGuardar = document.querySelector('button.btn-success, .btn-primary, button[type="submit"]');
+        if (btnGuardar && !btnGuardar.disabled) {
+            console.log("💾 Guardando calificación...");
+            btnGuardar.click();
+            
+            // Espera a que guarde y presiona "Volver"
+            setTimeout(() => {
+                const btnVolver = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Volver"));
+                if (btnVolver) {
+                    btnVolver.click();
+                    // Al volver a la tabla, procesa al siguiente alumno en 3 segundos
+                    setTimeout(() => ejecutarAcompanamiento(), 3000);
+                }
+            }, 2500);
         }
-    });
+    }, 1500);
 }
 
-// =====================================================
-// ESPERA
-// =====================================================
-
-function esperar(ms) {
-
-    return new Promise(r =>
-        setTimeout(r, ms)
-    );
-}
+// ESTO REPARA EL ERROR DE "NOT DEFINED" EN TU CONSOLA
+window.motorAcompanamiento = ejecutarAcompanamiento;
     // --- 5. MOTOR INICIAL ---
     function motorInicial() {
         const filas = Array.from(document.querySelectorAll("tr")).filter(f => Array.from(f.querySelectorAll("button")).some(b => b.innerText.toUpperCase().includes("GUARDAR")));
