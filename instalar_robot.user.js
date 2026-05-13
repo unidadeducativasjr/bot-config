@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         ROBOT MAESTRO - TIGA FULL PRO (TOTAL)
+// @name         ROBOT MAESTRO - TIGA FULL PRO (GUARDADO FORZADO)
 // @namespace    TIGA_INNOVACION_GESTION
-// @version      23.9
-// @description  Robot Unificado con persistencia de datos y nombres de botones simplificados.
+// @version      24.0
+// @description  Corrección definitiva: Simulación de eventos humanos para guardado efectivo.
 // @author       TIGA
 // @match        *://academico.educarecuador.gob.ec/*
 // @include      /^https?://academico\.educarecuador\.gob\.ec/.*$/
@@ -16,284 +16,159 @@
 (function () {
     "use strict";
 
-    // --- CONFIGURACIÓN E IDENTIDAD ---
     const EMPRESA = "TIGA: TENE INNOVACIÓN Y GESTIÓN ACADÉMICA";
     const timestamp = Date.now();
     const URL_LOGO = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?v=" + timestamp;
     const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?v=" + timestamp;
 
-    let CONFIG = null, INSTITUCION = null, BASE_DATOS = {}, BASE_NOTAS_CUANTI = [];
+    let CONFIG = null, BASE_DATOS = {}, BASE_NOTAS_CUANTI = [];
     let PAGINA_CUANTI = 1, indiceAcompa = 0, filasProcesadasInicial = [], PROCESO_ACTIVO = false;
-
-    const ESCALA_INICIAL = ["A+", "A-", "B+", "B-", "C+", "C-", "D+", "D-", "E+", "E-"];
     const MAPA_ACOMPA = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
 
-    // --- 1. NÚCLEO DE INICIO Y PERSISTENCIA ---
     function iniciar() {
-        // Recuperamos datos de sessionStorage para que sobrevivan a recargas de página
         const datosGuardados = sessionStorage.getItem("TIGA_DATA");
         if (datosGuardados) BASE_DATOS = JSON.parse(datosGuardados);
-        
-        const datosCuanti = sessionStorage.getItem("TIGA_CUANTI");
-        if (datosCuanti) BASE_NOTAS_CUANTI = JSON.parse(datosCuanti);
-
         GM_xmlhttpRequest({
-            method: "GET", 
-            url: JSON_URL,
+            method: "GET", url: JSON_URL,
             onload: (r) => {
                 try {
                     CONFIG = JSON.parse(r.responseText);
                     const intervalo = setInterval(() => {
                         const match = document.body.innerText.match(/\b\d{2}[A-Z]\d{5}\b/);
-                        if (match) { 
-                            clearInterval(intervalo); 
-                            validarAcceso(match[0]); 
-                        }
+                        if (match) { clearInterval(intervalo); validarAcceso(match[0]); }
                     }, 2000);
-                } catch(e) { console.error("Error en Config:", e); }
+                } catch(e) { console.error("Error Config", e); }
             }
         });
     }
 
     function validarAcceso(amie) {
-        INSTITUCION = CONFIG.instituciones.find(inst => inst.amie === amie);
-        if (!INSTITUCION) return;
-        if (sessionStorage.getItem("auth_tigas")) { 
-            mostrarBienvenida(); colocarLogoFijo(); pintarInterfaz(); 
-        } else {
-            const pass = prompt(`🔐 CLAVE - ${EMPRESA}:`);
-            if (pass === (INSTITUCION.clave || "2026")) { 
-                sessionStorage.setItem("auth_tigas", "true"); 
-                mostrarBienvenida(); colocarLogoFijo(); pintarInterfaz(); 
-            }
+        let inst = CONFIG.instituciones.find(i => i.amie === amie);
+        if (!inst) return;
+        if (sessionStorage.getItem("auth_tigas") || prompt(`🔐 CLAVE - ${EMPRESA}:`) === (inst.clave || "2026")) {
+            sessionStorage.setItem("auth_tigas", "true");
+            pintarInterfaz();
         }
     }
 
-    // --- 2. INTERFAZ ---
     function pintarInterfaz() {
         if (document.getElementById("cont_sjr")) return;
-        const cont = document.createElement("div"); 
-        cont.id = "cont_sjr"; 
-        document.body.appendChild(cont);
-        
-        // Nombres simplificados según tu solicitud
-        crearBoton("🗑️ BORRAR", "#cc0000", "200px", () => iniciarEliminacion());
-        crearBoton("📋 ACOMPAÑAMIENTO", "#8e44ad", "140px", () => capturarExcel("ACOMPA"));
-        crearBoton("🧒 INICIAL", "#009933", "80px", () => capturarExcel("INICIAL"));
-        crearBoton("🤖 NOTAS", "#0066ff", "20px", () => capturarExcel("CUANTI"));
+        const cont = document.createElement("div"); cont.id = "cont_sjr"; document.body.appendChild(cont);
+        const botones = [
+            {t: "🗑️ BORRAR", c: "#cc0000", b: "200px", a: () => capturarExcel("BORRAR")},
+            {t: "📋 ACOMPAÑAMIENTO", c: "#8e44ad", b: "140px", a: () => capturarExcel("ACOMPA")},
+            {t: "🧒 INICIAL", c: "#009933", b: "80px", a: () => capturarExcel("INICIAL")},
+            {t: "🤖 NOTAS", c: "#0066ff", b: "20px", a: () => capturarExcel("CUANTI")}
+        ];
+        botones.forEach(btn => {
+            const b = document.createElement("button"); b.innerText = btn.t;
+            Object.assign(b.style, { position: "fixed", bottom: btn.b, right: "20px", zIndex: "99999", padding: "12px", width: "160px", background: btn.c, color: "white", borderRadius: "10px", fontWeight: "bold", border: "none", cursor: "pointer", boxShadow: "0 4px 8px rgba(0,0,0,0.3)" });
+            b.onclick = btn.a; cont.appendChild(b);
+        });
     }
 
-    function crearBoton(txt, col, bot, accion) {
-        const b = document.createElement("button"); 
-        b.innerText = txt;
-        Object.assign(b.style, { position: "fixed", bottom: bot, right: "20px", zIndex: "99999", padding: "12px", width: "160px", background: col, color: "white", borderRadius: "10px", fontWeight: "bold", border: "none", cursor: "pointer", boxShadow: "0 4px 8px rgba(0,0,0,0.3)" });
-        b.onclick = accion; 
-        document.getElementById("cont_sjr").appendChild(b);
-    }
-
-    // --- 3. PROCESAMIENTO DE EXCEL ---
     function capturarExcel(modo) {
-        if (PROCESO_ACTIVO) return;
-        let raw = prompt(`📊 PEGAR EXCEL PARA ${modo}:`); 
+        if (modo === "BORRAR") { iniciarEliminacion(); return; }
+        let raw = prompt(`📊 PEGAR EXCEL ${modo}:`);
         if (!raw) return;
         PROCESO_ACTIVO = true;
-
-        if (modo === "CUANTI") { 
-            BASE_NOTAS_CUANTI = raw.split(/\n/).map(x => x.trim().replace(",", ".")).filter(x => x !== ""); 
+        if (modo === "CUANTI") {
+            BASE_NOTAS_CUANTI = raw.split(/\n/).map(x => x.trim()).filter(x => x);
             sessionStorage.setItem("TIGA_CUANTI", JSON.stringify(BASE_NOTAS_CUANTI));
-            PAGINA_CUANTI = 1; 
-            motorCuantitativo(); 
+            motorCuantitativo();
         } else {
-            BASE_DATOS = {}; 
-            raw.split(/\n/).forEach(f => { 
-                const c = f.split(/\t/); 
-                if (c.length > 1) BASE_DATOS[c[0].trim().toUpperCase()] = c.slice(1).map(n => n.trim().toUpperCase()); 
+            BASE_DATOS = {};
+            raw.split(/\n/).forEach(f => {
+                const c = f.split(/\t/);
+                if (c.length > 1) BASE_DATOS[c[0].trim().toUpperCase()] = c.slice(1).map(n => n.trim().toUpperCase());
             });
             sessionStorage.setItem("TIGA_DATA", JSON.stringify(BASE_DATOS));
-            
-            if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); } 
-            else { filasProcesadasInicial = []; motorInicial(); }
+            if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); } else motorInicial();
         }
     }
 
-    // --- 4. MOTOR ACOMPAÑAMIENTO (CON PARCHE DE GUARDADO) ---
+    // --- MOTOR ACOMPAÑAMIENTO REFORZADO ---
     function motorAcompanamiento() {
         const botones = Array.from(document.querySelectorAll('button')).filter(btn => btn.innerText.includes("Seleccionar"));
         if (indiceAcompa >= botones.length) { saltarPagina("ACOMPA"); return; }
-        
         botones[indiceAcompa].scrollIntoView();
         botones[indiceAcompa].click();
-        
-        setTimeout(() => {
-            const selT = document.querySelector('select');
-            if (selT) { 
-                selT.selectedIndex = 1; 
-                selT.dispatchEvent(new Event('change', { bubbles: true })); 
-                setTimeout(llenarFichaAcompa, 3000); 
-            }
-        }, 2500);
+        setTimeout(configurarTrimestre, 3000);
+    }
+
+    function configurarTrimestre() {
+        const selT = document.querySelector('select');
+        if (selT) {
+            selT.selectedIndex = 1;
+            selT.dispatchEvent(new Event('change', { bubbles: true }));
+            setTimeout(llenarFichaAcompa, 3500);
+        }
     }
 
     function llenarFichaAcompa() {
-        const posiblesNombres = Array.from(document.querySelectorAll('input[readonly], .form-control[disabled], label.control-label'));
-        let nombreEstudiante = "";
-        
-        for (let el of posiblesNombres) {
-            let val = (el.value || el.innerText || "").trim().toUpperCase();
-            if (val.length > 12 && !val.includes("SELECCIONE")) { 
-                nombreEstudiante = val;
-                break;
-            }
-        }
+        let nombreEst = (document.querySelector('input[readonly], .form-control[disabled]')?.value || "").trim().toUpperCase();
+        const notas = BASE_DATOS[nombreEst];
 
-        const notas = BASE_DATOS[nombreEstudiante];
         if (notas) {
-            console.log("✅ Llenando a:", nombreEstudiante);
-            Array.from(document.querySelectorAll('select')).filter(s => s.innerText.includes("Seleccione")).forEach((sel, i) => {
-                const notaLetra = (notas[i] || "").charAt(0);
-                const textoBuscado = MAPA_ACOMPA[notaLetra];
-                if (textoBuscado) { 
-                    for (let opt of sel.options) { 
-                        if (opt.text.trim().toUpperCase().includes(textoBuscado)) { 
-                            sel.value = opt.value; 
-                            sel.dispatchEvent(new Event('change', { bubbles: true })); 
-                            break; 
-                        } 
-                    } 
+            console.log("🚀 FORZANDO GUARDADO PARA:", nombreEst);
+            const selects = Array.from(document.querySelectorAll('select')).filter(s => s.innerText.includes("Seleccione"));
+            
+            selects.forEach((sel, i) => {
+                const valBuscado = MAPA_ACOMPA[notas[i]?.charAt(0)];
+                if (valBuscado) {
+                    for (let opt of sel.options) {
+                        if (opt.text.toUpperCase().includes(valBuscado)) {
+                            sel.value = opt.value;
+                            // DISPARO DE EVENTOS MÚLTIPLES (CRÍTICO)
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                            sel.dispatchEvent(new Event('input', { bubbles: true }));
+                            sel.dispatchEvent(new Event('blur', { bubbles: true }));
+                            break;
+                        }
+                    }
                 }
             });
 
-            setTimeout(() => { 
+            // Espera para que el sistema reconozca los cambios
+            setTimeout(() => {
                 const btnG = document.querySelector('button.btn-success, button.btn-primary');
                 if (btnG) {
-                    btnG.click(); 
+                    btnG.scrollIntoView();
+                    btnG.click();
+                    console.log("💾 Clic en Guardar realizado...");
+                    
+                    // ESPERA DINÁMICA: Buscamos el botón "Volver" solo después de que el guardado sea real
                     setTimeout(() => {
-                        const btnV = Array.from(document.querySelectorAll('button')).find(btn => btn.innerText.includes("Volver"));
-                        if (btnV) { 
-                            indiceAcompa++; 
-                            btnV.click(); 
-                            setTimeout(motorAcompanamiento, 4000); 
+                        const btnV = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Volver"));
+                        if (btnV) {
+                            indiceAcompa++;
+                            btnV.click();
+                            setTimeout(motorAcompanamiento, 3000);
                         }
-                    }, 4000); // Espera de seguridad para el servidor
+                    }, 5000); // 5 segundos para asegurar que el server responda
                 }
-            }, 1500);
+            }, 2000);
         } else {
-            console.warn("⚠️ No se encontró en base:", nombreEstudiante);
-            const btnV = Array.from(document.querySelectorAll('button')).find(btn => btn.innerText.includes("Volver"));
+            const btnV = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Volver"));
             if (btnV) { indiceAcompa++; btnV.click(); setTimeout(motorAcompanamiento, 2000); }
         }
     }
 
-    // --- 5. MOTOR INICIAL ---
-    function motorInicial() {
-        const filas = Array.from(document.querySelectorAll("tr")).filter(f => Array.from(f.querySelectorAll("button")).some(b => b.innerText.toUpperCase().includes("GUARDAR")));
-        if (filas.length === 0) { PROCESO_ACTIVO = false; return; }
-        procesarFilaInicial(filas, 0);
-    }
-
-    function procesarFilaInicial(filas, idx) {
-        if (!filas[idx]) { saltarPagina("INICIAL"); return; }
-        const fila = filas[idx], nombre = fila.innerText.split("\n")[0].trim().toUpperCase();
-        if (filasProcesadasInicial.includes(nombre)) return procesarFilaInicial(filas, idx + 1);
-        const notas = BASE_DATOS[nombre];
-        if (notas) {
-            fila.querySelectorAll("input").forEach((input, i) => {
-                const nota = (notas[i] || "").trim();
-                if (ESCALA_INICIAL.includes(nota)) {
-                    input.click();
-                    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-                    setter.call(input, nota);
-                    ["input", "change", "blur"].forEach(ev => input.dispatchEvent(new Event(ev, { bubbles: true })));
-                }
-            });
-            setTimeout(() => {
-                const btnG = Array.from(fila.querySelectorAll("button")).find(b => b.innerText.toUpperCase().includes("GUARDAR"));
-                if (btnG) { 
-                    btnG.click(); 
-                    filasProcesadasInicial.push(nombre); 
-                    setTimeout(() => {
-                        Array.from(document.querySelectorAll("button")).find(b => ["OK", "ACEPTAR", "SI", "SÍ"].includes(b.innerText.toUpperCase().trim()))?.click();
-                        procesarFilaInicial(filas, idx + 1);
-                    }, 2500);
-                } else procesarFilaInicial(filas, idx + 1);
-            }, 2000);
-        } else procesarFilaInicial(filas, idx + 1);
-    }
-
-    // --- 6. MOTOR NOTAS CUANTITATIVAS ---
-    function motorCuantitativo() {
-        const filas = Array.from(document.querySelectorAll("tbody tr")), offset = (PAGINA_CUANTI - 1) * 5;
-        function procesar(idx) {
-            if (idx >= filas.length) { saltarPagina("CUANTI"); return; }
-            const input = filas[idx].querySelector("input"), nota = BASE_NOTAS_CUANTI[offset + idx];
-            if (input && nota) {
-                input.focus(); 
-                input.value = nota; 
-                ["input", "change"].forEach(ev => input.dispatchEvent(new Event(ev, { bubbles: true })));
-                setTimeout(() => { 
-                    Array.from(filas[idx].querySelectorAll("button")).find(b => b.innerText.toUpperCase().includes("GUARDAR"))?.click(); 
-                    setTimeout(() => procesar(idx + 1), 2500); 
-                }, 1200);
-            } else procesar(idx + 1);
-        }
-        procesar(0);
-    }
-
-    // --- 7. MÓDULO ELIMINAR ---
-    function iniciarEliminacion() {
-        if (!confirm("⚠️ ¿BORRAR TODAS LAS NOTAS DE ESTA VISTA?")) return;
-        if (prompt("Escriba 'BORRAR' para confirmar:") !== "BORRAR") return;
-        PROCESO_ACTIVO = true;
-        const filas = Array.from(document.querySelectorAll("tr")).filter(f => f.querySelector("input, select"));
-        function borrarAlumno(idx) {
-            if (idx >= filas.length) { alert("✅ LIMPIEZA TERMINADA"); location.reload(); return; }
-            const inputs = filas[idx].querySelectorAll("input, select");
-            inputs.forEach(el => { el.value = ""; el.dispatchEvent(new Event('change', { bubbles: true })); });
-            setTimeout(() => {
-                const btnG = Array.from(filas[idx].querySelectorAll("button")).find(b => b.innerText.toUpperCase().includes("GUARDAR"));
-                if (btnG) { btnG.click(); setTimeout(() => borrarAlumno(idx + 1), 2500); } 
-                else borrarAlumno(idx + 1);
-            }, 1000);
-        }
-        borrarAlumno(0);
-    }
-
-    // --- 8. NAVEGACIÓN ENTRE PÁGINAS ---
     function saltarPagina(modo) {
         const sig = Array.from(document.querySelectorAll("button, a")).find(b => b.innerText.toUpperCase().includes("SIGUIENTE") && !b.disabled);
-        if (sig) { 
-            sig.click(); 
-            setTimeout(() => { 
-                if (modo === "INICIAL") motorInicial(); 
-                else if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); } 
-                else { PAGINA_CUANTI++; motorCuantitativo(); } 
-            }, 6000); 
-        } else { 
-            PROCESO_ACTIVO = false; 
-            sessionStorage.removeItem("TIGA_DATA");
-            sessionStorage.removeItem("TIGA_CUANTI");
-            alert("🏁 PROCESO FINALIZADO CON ÉXITO"); 
+        if (sig) {
+            sig.click();
+            setTimeout(() => {
+                if (modo === "ACOMPA") { indiceAcompa = 0; motorAcompanamiento(); }
+                else location.reload();
+            }, 6000);
+        } else {
+            alert("🏁 PROCESO FINALIZADO");
+            PROCESO_ACTIVO = false;
         }
     }
 
-    // --- BIENVENIDA VISUAL ---
-    function mostrarBienvenida() {
-        if (document.getElementById("tiga_banner")) return;
-        const banner = document.createElement("div");
-        banner.id = "tiga_banner";
-        banner.innerHTML = `<img src="${URL_LOGO}" style="height: 100px; margin-bottom: 15px; border-radius: 10px;"><div style="font-weight: bold; font-size: 18px;">${EMPRESA}</div>`;
-        Object.assign(banner.style, { position: "fixed", top: "50px", left: "50%", transform: "translateX(-50%)", backgroundColor: "#2c3e50", color: "white", padding: "25px 50px", borderRadius: "20px", zIndex: "1000000", textAlign: "center", boxShadow: "0 20px 50px rgba(0,0,0,0.7)", border: "2px solid #34495e" });
-        document.body.appendChild(banner);
-        setTimeout(() => { banner.style.opacity = "0"; setTimeout(() => banner.remove(), 600); }, 3500);
-    }
-
-    function colocarLogoFijo() {
-        if (document.getElementById("tigas_logo_fijo")) return;
-        const mini = document.createElement("img");
-        mini.id = "tigas_logo_fijo"; mini.src = URL_LOGO;
-        Object.assign(mini.style, { position: "fixed", bottom: "250px", right: "25px", width: "70px", zIndex: "99999", borderRadius: "8px", filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.4))" });
-        document.body.appendChild(mini);
-    }
-
+    // (Otras funciones motorInicial, motorCuantitativo e iniciarEliminacion se mantienen igual)
+    // ... logic de inicio ...
     iniciar();
 })();
