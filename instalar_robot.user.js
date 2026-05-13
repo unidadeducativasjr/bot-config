@@ -20,7 +20,6 @@
     const timestamp = Date.now();
     const URL_LOGO = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/WhatsApp%20Image%202026-05-09%20at%2006.51.35%20PM.jpeg?v=" + timestamp;
     const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-config/main/config.json?v=" + timestamp;
-
     let CONFIG = null, BASE_DATOS = {}, BASE_NOTAS_CUANTI = [];
     let PAGINA_CUANTI = 1, indiceAcompa = 0, filasProcesadasInicial = [], PROCESO_ACTIVO = false;
     const MAPA_ACOMPA = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
