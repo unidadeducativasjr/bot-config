@@ -320,4 +320,64 @@ async function ejecutarAcompanamiento() {
     }
 
     iniciar();
+    // --- FUNCIÓN QUE EL ERROR DICE QUE FALTA ---
+    window.motorAcompanamiento = async function() {
+        await ejecutarAcompanamiento();
+    };
+
+    async function ejecutarAcompanamiento() {
+        const NOMBRE_IE = "SAN JOSE DE RARANGA";
+        if (!document.body.innerText.includes(NOMBRE_IE)) {
+            alert("❌ Acceso Denegado");
+            return;
+        }
+
+        // Aquí usamos la lógica de tu código de éxito
+        const inputNombre = document.querySelector('input[readonly], .form-control[disabled]');
+        if (!inputNombre) { alert("❌ Selecciona un alumno primero."); return; }
+
+        const nombrePantalla = inputNombre.value.trim().toUpperCase();
+        
+        // Buscamos en el mapa de GitHub
+        if (!CONFIG || !CONFIG.acompanamiento_mapa) {
+            alert("❌ Error: No hay datos de acompañamiento en GitHub (config.json)");
+            return;
+        }
+        
+        const misNotas = CONFIG.acompanamiento_mapa[nombrePantalla];
+        if (!misNotas) {
+            alert("❓ No encontré a '" + nombrePantalla + "' en la lista de GitHub.");
+            return;
+        }
+
+        const mapaTexto = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+        const selects = Array.from(document.querySelectorAll('select, mat-select'));
+
+        for (let i = 0; i < selects.length; i++) {
+            const sel = selects[i];
+            const textoLargo = mapaTexto[misNotas[i]];
+
+            if (textoLargo) {
+                // CLIC REAL PARA QUE EL BOTÓN GUARDAR SE ACTIVE
+                sel.click(); 
+                await new Promise(r => setTimeout(r, 400));
+                const opciones = document.querySelectorAll('mat-option');
+                for (let opt of opciones) {
+                    if (opt.innerText.trim() === textoLargo) {
+                        opt.click(); // Esto activa el guardado en la web
+                        break;
+                    }
+                }
+            }
+        }
+
+        // GUARDADO AUTOMÁTICO
+        setTimeout(() => {
+            const btnGuardar = document.querySelector('button.btn-primary, .btn-success, button[type="submit"]');
+            if (btnGuardar) {
+                btnGuardar.click();
+                console.log("✅ Guardado enviado.");
+            }
+        }, 1000);
+    }
 })();
