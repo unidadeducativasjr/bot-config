@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ROBOT MAESTRO - TIGA FULL PRO (TOTAL)
 // @namespace    TIGA_INNOVACION_GESTION
-// @version      23.9
+// @version      24.0
 // @description  Robot Unificado con persistencia de datos y nombres de botones simplificados.
 // @author       TIGA
 // @match        *://academico.educarecuador.gob.ec/*
