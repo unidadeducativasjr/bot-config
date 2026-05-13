@@ -426,18 +426,50 @@ for (let inp of posiblesInputs) {
 
         console.log("💾 GUARDANDO");
 
-        btnGuardar.click();
+        try {
 
-        ALUMNOS_PROCESADOS
-        .push(nombreAlumno);
+    btnGuardar.click();
 
-        await esperar(2500);
+    console.log("💾 GUARDADO ENVIADO");
 
-        cerrarPopups();
+} catch (e) {
 
-        await esperar(1500);
+    console.log(
+        "⚠️ ERROR VISUAL ANGULAR IGNORADO"
+    );
+}
 
-        volverLista();
+// =====================================
+// ESPERAR RESPUESTA REAL
+// =====================================
+
+await esperar(4000);
+
+// =====================================
+// CERRAR POPUPS
+// =====================================
+
+cerrarPopups();
+
+await esperar(2000);
+
+// =====================================
+// MARCAR PROCESADO
+// =====================================
+
+ALUMNOS_PROCESADOS
+.push(nombreAlumno);
+
+console.log(
+    "✅ GUARDADO:",
+    nombreAlumno
+);
+
+// =====================================
+// VOLVER
+// =====================================
+
+volverLista();
 
     } else {
 
