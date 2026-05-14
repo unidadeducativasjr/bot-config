@@ -343,10 +343,23 @@ for (let inp of posiblesInputs) {
     // =========================================
 
     const selects = Array.from(
-        document.querySelectorAll(
-            'mat-select, select'
-        )
+
+    document.querySelectorAll(
+        'mat-select'
+    )
+
+).filter(sel => {
+
+    return (
+        sel.offsetParent !== null
     );
+
+});
+
+console.log(
+    "🎯 SELECTS REALES:",
+    selects.length
+);
 
     console.log(
         "🎯 SELECTS:",
