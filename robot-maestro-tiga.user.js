@@ -181,102 +181,64 @@ window.ALUMNOS_PROCESADOS = window.ALUMNOS_PROCESADOS || JSON.parse(sessionStora
 window.LISTA_EXITO = window.LISTA_EXITO || JSON.parse(sessionStorage.getItem("TIGA_DONE") || "[]");
 
 async function ejecutarAcompanamiento() {
-    console.log("🛠️ MOTOR EN MODO SEGURO ACTIVO");
+    console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE");
 
-    try {
-        const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
+    const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
+    if (!alumnoAbierto) return;
+
+    const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
+    const notas = BASE_DATOS[nombreAlumno];
+
+    if (!notas) {
+        console.warn("⚠️ Sin notas para:", nombreAlumno);
+        return;
+    }
+
+    // 1. OBTENER SELECTS DE HABILIDADES
+    let selectsNotas = Array.from(document.querySelectorAll('mat-select')).filter(s => 
+        !s.getAttribute('formcontrolname')?.includes('trimestre') && 
+        !s.innerText.includes("TRIMESTRE")
+    );
+
+    const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+
+    // 2. PROCESO DE LLENADO CON DISPARO DE EVENTOS
+    for (let i = 0; i < selectsNotas.length; i++) {
+        const textoObjetivo = mapa[notas[i]?.trim().toUpperCase()];
+
+        if (textoObjetivo) {
+            // Abrir el selector
+            selectsNotas[i].click();
+            await new Promise(r => setTimeout(r, 600));
+
+            // Buscar y seleccionar la opción
+            const opciones = Array.from(document.querySelectorAll('mat-option'));
+            const miOpcion = opciones.find(o => o.innerText.trim().toUpperCase().includes(textoObjetivo));
+
+            if (miOpcion) {
+                miOpcion.click();
+                
+                // --- TRUCO CRÍTICO: Forzar a la página a reconocer el cambio ---
+                selectsNotas[i].dispatchEvent(new Event('change', { bubbles: true }));
+                selectsNotas[i].dispatchEvent(new Event('input', { bubbles: true }));
+                
+                await new Promise(r => setTimeout(r, 400));
+            }
+        }
+    }
+
+    // 3. GUARDADO CON VALIDACIÓN
+    console.log("📝 Verificando campos antes de guardar...");
+    const btnGuardar = document.querySelector('button.btn-success, .mat-success');
+    
+    if (btnGuardar) {
+        btnGuardar.scrollIntoView({ block: "center" });
+        await new Promise(r => setTimeout(r, 500));
+        btnGuardar.click();
         
-        // --- ESCENARIO 1: LISTA PRINCIPAL ---
-        if (!alumnoAbierto) {
-            console.log("📋 Buscando siguiente alumno pendiente...");
-            const botones = Array.from(document.querySelectorAll("button")).filter(b => b.innerText.includes("Seleccionar"));
-            
-            for (let btn of botones) {
-                const nombre = btn.closest("tr").innerText.split("\n")[0].trim().toUpperCase();
-                if (!window.LISTA_EXITO.includes(nombre)) {
-                    console.log("🖱️ Entrando a:", nombre);
-                    btn.click();
-                    return; 
-                }
-            }
-            alert("✅ ¡Misión cumplida! Todos los alumnos de esta página procesados.");
-            return;
-        }
-
-        // --- ESCENARIO 2: DENTRO DE LA FICHA ---
-        const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
-        const notas = BASE_DATOS[nombreAlumno];
-
-        if (!notas) {
-            console.warn("⚠️ No tengo notas para:", nombreAlumno);
-            return;
-        }
-
-        // ESPERA CRÍTICA: Esperar a que los selectores existan para evitar el error 'filter'
-        await new Promise(r => setTimeout(r, 1500)); 
-        
-        let selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
-            !s.innerText.includes("TRIMESTRE") && !s.getAttribute('formcontrolname')?.includes('trimestre')
-        );
-
-        if (selects.length === 0) {
-            console.log("⏳ Reintentando detectar campos de notas...");
-            setTimeout(ejecutarAcompanamiento, 2000);
-            return;
-        }
-
-        const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
-
-        // LLENADO CON CLIC HUMANO
-        for (let i = 0; i < selects.length; i++) {
-            const texto = mapa[notas[i]?.trim().toUpperCase()];
-            if (texto && selects[i].innerText.includes("Seleccione")) {
-                selects[i].scrollIntoView({ block: "center" });
-                selects[i].click();
-                await new Promise(r => setTimeout(r, 800));
-
-                const opciones = Array.from(document.querySelectorAll('mat-option'));
-                const miOpt = opciones.find(o => o.innerText.trim().toUpperCase().includes(texto));
-
-                if (miOpt) {
-                    miOpt.click();
-                    // IMPORTANTE: Disparar eventos para que la plataforma "despierte"
-                    selects[i].dispatchEvent(new Event('change', { bubbles: true }));
-                    selects[i].dispatchEvent(new Event('blur', { bubbles: true }));
-                    await new Promise(r => setTimeout(r, 500));
-                }
-            }
-        }
-
-        // GUARDADO CON VERIFICACIÓN DE POPUPS
-        console.log("💾 Iniciando guardado para:", nombreAlumno);
-        const btnGuardar = document.querySelector('button.btn-success, .mat-success');
-        if (btnGuardar) {
-            btnGuardar.click();
-            await new Promise(r => setTimeout(r, 4000)); // Esperar respuesta del servidor
-
-            // Buscar botones de "OK" o "CERRAR" en los mensajes de error/éxito
-            const btnCerrar = Array.from(document.querySelectorAll('button')).find(b => 
-                ["OK", "ACEPTAR", "CERRAR", "GUARDAR"].includes(b.innerText.toUpperCase().trim())
-            );
-
-            if (btnCerrar) {
-                btnCerrar.click();
-                console.log("✅ Ventana cerrada automáticamente.");
-                await new Promise(r => setTimeout(r, 1000));
-            }
-
-            // Si llegamos aquí, registramos éxito y regresamos
-            window.LISTA_EXITO.push(nombreAlumno);
-            sessionStorage.setItem("TIGA_DONE", JSON.stringify(window.LISTA_EXITO));
-            
-            const btnVolver = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Volver"));
-            if (btnVolver) btnVolver.click();
-        }
-
-    } catch (err) {
-        console.error("🔄 Error de sistema recuperado:", err.message);
-        setTimeout(ejecutarAcompanamiento, 3000);
+        console.log("💾 Clic en Guardar realizado. Esperando confirmación...");
+        // Espera de 5 segundos para que el servidor responda antes de hacer cualquier otra cosa
+        await new Promise(r => setTimeout(r, 5000));
     }
 }
     // --- 5. MOTOR INICIAL ---
