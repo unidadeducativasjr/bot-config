@@ -406,17 +406,6 @@ console.log(
 // SI NO HAY CONTROLES
 // =========================================
 
-if (selects.length === 0) {
-
-    console.log(
-        "❌ NO CARGARON CONTROLES"
-    );
-
-    volverLista();
-
-    return;
-}
-
     console.log(
         "🎯 SELECTS:",
         selects.length
