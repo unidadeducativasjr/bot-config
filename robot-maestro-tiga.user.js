@@ -161,7 +161,7 @@ const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-confi
         }
     }
 
-  // =====================================================
+ // =====================================================
 // ACOMPAÑAMIENTO AUTOMÁTICO ESTABLE
 // =====================================================
 
@@ -172,39 +172,15 @@ async function ejecutarAcompanamiento() {
     console.log("🚀 INICIANDO ACOMPAÑAMIENTO");
 
     // =========================================
-    // DETECTAR SI ESTAMOS EN LISTA
+    // DETECTAR SI ESTAMOS EN TABLA
     // =========================================
 
-    // =========================================
-// DETECTAR SI YA ESTAMOS DENTRO DEL ALUMNO
-// =========================================
-
-let alumnoAbierto = null;
-
-// INPUTS CON NOMBRE
-const posiblesInputs = Array.from(
-    document.querySelectorAll("input")
-);
-
-for (let inp of posiblesInputs) {
-
-    const val =
-        (inp.value || "")
-        .trim();
-
-    if (
-        val.length > 5 &&
-        val.includes(" ")
-    ) {
-
-        alumnoAbierto = inp;
-
-        break;
-    }
-}
+    const alumnoAbierto = document.querySelector(
+        'input[readonly], .form-control[disabled]'
+    );
 
     // =========================================
-    // SI ESTÁ EN LA TABLA
+    // SI ESTAMOS EN LISTA
     // =========================================
 
     if (!alumnoAbierto) {
@@ -215,6 +191,7 @@ for (let inp of posiblesInputs) {
             document.querySelectorAll("button")
         ).filter(b =>
             b.innerText
+            .trim()
             .toUpperCase()
             .includes("SELECCIONAR")
         );
@@ -232,16 +209,11 @@ for (let inp of posiblesInputs) {
             return;
         }
 
-        // =========================================
-        // BUSCAR FILA NO PROCESADA
-        // =========================================
-
         let encontrado = false;
 
         for (let btn of botones) {
 
-            const fila =
-                btn.closest("tr");
+            const fila = btn.closest("tr");
 
             if (!fila) continue;
 
@@ -252,8 +224,9 @@ for (let inp of posiblesInputs) {
                 .toUpperCase();
 
             if (
-                !ALUMNOS_PROCESADOS
-                .includes(nombreFila)
+                !ALUMNOS_PROCESADOS.includes(
+                    nombreFila
+                )
             ) {
 
                 console.log(
@@ -267,7 +240,7 @@ for (let inp of posiblesInputs) {
 
                 setTimeout(() => {
                     ejecutarAcompanamiento();
-                }, 4000);
+                }, 7000);
 
                 break;
             }
@@ -276,7 +249,7 @@ for (let inp of posiblesInputs) {
         if (!encontrado) {
 
             console.log(
-                "🏁 TODOS FUERON PROCESADOS"
+                "🏁 TODOS PROCESADOS"
             );
 
             PROCESO_ACTIVO = false;
@@ -304,7 +277,13 @@ for (let inp of posiblesInputs) {
     );
 
     // =========================================
-    // BUSCAR NOTAS EN EXCEL PEGADO
+    // ESPERAR CARGA ANGULAR
+    // =========================================
+
+    await esperar(5000);
+
+    // =========================================
+    // BUSCAR NOTAS
     // =========================================
 
     const notas =
@@ -317,15 +296,19 @@ for (let inp of posiblesInputs) {
             nombreAlumno
         );
 
-        ALUMNOS_PROCESADOS
-        .push(nombreAlumno);
+        ALUMNOS_PROCESADOS.push(
+            nombreAlumno
+        );
 
         volverLista();
 
         return;
     }
 
-    console.log("✅ NOTAS:", notas);
+    console.log(
+        "✅ NOTAS:",
+        notas
+    );
 
     // =========================================
     // MAPA
@@ -342,74 +325,20 @@ for (let inp of posiblesInputs) {
     // SELECTS
     // =========================================
 
-    // =========================================
-// ESPERAR CONTROLES ANGULAR
-// =========================================
-// =========================================
-// SELECCIONAR TRIMESTRE AUTOMÁTICO
-// =========================================
-
-// =========================================
-// BUSCAR CAMPO TRIMESTRE REAL
-// =========================================
-
-// =========================================
-// ESPERAR QUE ANGULAR CARGUE
-// =========================================
-
-await esperar(5000);
-
-// =========================================
-// SELECTS
-// =========================================
-
-const selects = Array.from(
-    document.querySelectorAll(
-        'mat-select, select'
-    )
-);
-
-console.log(
-    "🎯 SELECTS:",
-    selects.length
-);
-
-        const opciones = Array.from(
-            document.querySelectorAll(
-                'mat-option'
-            )
-        );
-
-        const opcionTrimestre =
-            opciones.find(o => {
-
-                return (
-                    o.innerText.includes("TRIMESTRE")
-                );
-
-            });
-
-        if (opcionTrimestre) {
-
-            opcionTrimestre.click();
-
-            console.log(
-                "✅ TRIMESTRE SELECCIONADO"
-            );
-
-            await esperar(4000);
-        }
-    }
-}
-
-// =========================================
-// SI NO HAY CONTROLES
-// =========================================
+    const selects = Array.from(
+        document.querySelectorAll(
+            'mat-select, select'
+        )
+    );
 
     console.log(
         "🎯 SELECTS:",
         selects.length
     );
+
+    // =========================================
+    // LLENAR
+    // =========================================
 
     for (let i = 0; i < selects.length; i++) {
 
@@ -425,7 +354,7 @@ console.log(
         const sel = selects[i];
 
         // =====================================
-        // MAT-SELECT
+        // MAT SELECT
         // =====================================
 
         if (
@@ -436,7 +365,7 @@ console.log(
 
             sel.click();
 
-            await esperar(500);
+            await esperar(700);
 
             const opciones = Array.from(
                 document.querySelectorAll(
@@ -445,12 +374,18 @@ console.log(
             );
 
             const opcionCorrecta =
-                opciones.find(opt =>
-                    opt.innerText
-                    .trim()
-                    .toUpperCase()
-                    .includes(textoObjetivo)
-                );
+                opciones.find(opt => {
+
+                    return (
+                        opt.innerText
+                        .trim()
+                        .toUpperCase()
+                        .includes(
+                            textoObjetivo
+                        )
+                    );
+
+                });
 
             if (opcionCorrecta) {
 
@@ -461,6 +396,7 @@ console.log(
                     textoObjetivo
                 );
             }
+
         }
 
         // =====================================
@@ -477,11 +413,12 @@ console.log(
                     opt.text
                     .trim()
                     .toUpperCase()
-                    .includes(textoObjetivo)
+                    .includes(
+                        textoObjetivo
+                    )
                 ) {
 
-                    sel.value =
-                        opt.value;
+                    sel.value = opt.value;
 
                     [
                         "input",
@@ -502,7 +439,7 @@ console.log(
             }
         }
 
-        await esperar(300);
+        await esperar(500);
     }
 
     // =========================================
@@ -523,6 +460,7 @@ console.log(
         return (
             t.includes("GUARDAR")
         );
+
     });
 
     if (btnGuardar) {
@@ -531,48 +469,31 @@ console.log(
 
         try {
 
-    btnGuardar.click();
+            btnGuardar.click();
 
-    console.log("💾 GUARDADO ENVIADO");
+        } catch (e) {
 
-} catch (e) {
+            console.log(
+                "⚠️ ERROR ANGULAR IGNORADO"
+            );
+        }
 
-    console.log(
-        "⚠️ ERROR VISUAL ANGULAR IGNORADO"
-    );
-}
+        await esperar(4000);
 
-// =====================================
-// ESPERAR RESPUESTA REAL
-// =====================================
+        cerrarPopups();
 
-await esperar(4000);
+        await esperar(2000);
 
-// =====================================
-// CERRAR POPUPS
-// =====================================
+        ALUMNOS_PROCESADOS.push(
+            nombreAlumno
+        );
 
-cerrarPopups();
+        console.log(
+            "✅ GUARDADO:",
+            nombreAlumno
+        );
 
-await esperar(2000);
-
-// =====================================
-// MARCAR PROCESADO
-// =====================================
-
-ALUMNOS_PROCESADOS
-.push(nombreAlumno);
-
-console.log(
-    "✅ GUARDADO:",
-    nombreAlumno
-);
-
-// =====================================
-// VOLVER
-// =====================================
-
-volverLista();
+        volverLista();
 
     } else {
 
@@ -606,6 +527,7 @@ function volverLista() {
             t.includes("REGRESAR") ||
             t.includes("ATRÁS")
         );
+
     });
 
     if (btnVolver) {
@@ -615,8 +537,10 @@ function volverLista() {
         btnVolver.click();
 
         setTimeout(() => {
+
             ejecutarAcompanamiento();
-        }, 4000);
+
+        }, 7000);
     }
 }
 
