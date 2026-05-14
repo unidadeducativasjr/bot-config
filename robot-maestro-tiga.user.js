@@ -209,17 +209,35 @@ async function ejecutarAcompanamiento() {
     console.log("👨‍🎓 PROCESANDO A:", nombreAlumno);
 
     // 1. SELECCIONAR TRIMESTRE
+    // --- 1. SELECCIÓN DE TRIMESTRE CON CLIC FORZADO ---
     const comboTri = document.querySelector('mat-select[formcontrolname*="trimestre"]');
+    
     if (comboTri && (comboTri.innerText.includes("Seleccione") || comboTri.innerText.trim() === "")) {
-        const tri = prompt(`Elija TRIMESTRE para ${nombreAlumno} (1 o 2):`, "2");
-        if (!tri) return;
+        const triSeleccionado = prompt(`Elija el TRIMESTRE para ${nombreAlumno} (1 o 2):`, "2");
+        if (!triSeleccionado) return;
+
+        console.log("🖱️ Forzando apertura de menú de trimestre...");
+        
+        // Técnica de triple clic para asegurar que Angular reaccione
+        comboTri.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         comboTri.click();
-        await new Promise(r => setTimeout(r, 1000));
+        comboTri.dispatchEvent(new Event('change', { bubbles: true }));
+
+        await new Promise(r => setTimeout(r, 1500)); // Espera a que las opciones aparezcan en el DOM
+
         const opciones = Array.from(document.querySelectorAll('mat-option'));
-        const miOpcion = opciones.find(o => o.innerText.includes(tri));
+        const miOpcion = opciones.find(o => o.innerText.includes(triSeleccionado));
+        
         if (miOpcion) {
+            console.log("✅ Opción encontrada, haciendo clic...");
             miOpcion.click();
-            await new Promise(r => setTimeout(r, 3500)); 
+            miOpcion.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            
+            // ESPERA CRUCIAL: 4 segundos para que la página dibuje las filas de notas
+            console.log("⏳ Esperando que el sistema cargue las habilidades...");
+            await new Promise(r => setTimeout(r, 4000)); 
+        } else {
+            console.error("❌ No se encontró la opción de trimestre en el menú.");
         }
     }
 
