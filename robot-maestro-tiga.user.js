@@ -160,436 +160,157 @@ const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-confi
             else { filasProcesadasInicial = []; motorInicial(); }
         }
     }
-
- // =====================================================
-// ACOMPAÑAMIENTO AUTOMÁTICO ESTABLE
+// =====================================================
+// ACOMPAÑAMIENTO AUTOMÁTICO - VERSIÓN FINAL ESTABLE
 // =====================================================
 
 let ALUMNOS_PROCESADOS = [];
 
 async function ejecutarAcompanamiento() {
-
     console.log("🚀 INICIANDO ACOMPAÑAMIENTO");
 
-    // =========================================
-    // DETECTAR SI ESTAMOS EN TABLA
-    // =========================================
+    // 1. DETECTAR SI ESTAMOS EN TABLA O EN FICHA
+    const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
 
-    const alumnoAbierto = document.querySelector(
-        'input[readonly], .form-control[disabled]'
-    );
-
-    // =========================================
-    // SI ESTAMOS EN LISTA
-    // =========================================
-
+    // --- ESCENARIO A: ESTAMOS EN LA LISTA DE ALUMNOS ---
     if (!alumnoAbierto) {
+        console.log("📋 BUSCANDO ALUMNOS EN LA TABLA...");
 
-        console.log("📋 BUSCANDO ALUMNOS");
-
-        const botones = Array.from(
-            document.querySelectorAll("button")
-        ).filter(b =>
-            b.innerText
-            .trim()
-            .toUpperCase()
-            .includes("SELECCIONAR")
+        // Buscamos los botones de la columna "Seleccionar"
+        const botones = Array.from(document.querySelectorAll("button")).filter(b => 
+            b.innerText.toUpperCase().includes("SELECCIONAR")
         );
 
         if (botones.length === 0) {
-
-            console.log("🏁 NO HAY MÁS ALUMNOS");
-
-            PROCESO_ACTIVO = false;
-
-            alert(
-                "✅ ACOMPAÑAMIENTO FINALIZADO"
-            );
-
+            alert("🏁 No hay más alumnos o no estoy en la página correcta.");
             return;
         }
 
-        let encontrado = false;
-
+        let botonParaClic = null;
         for (let btn of botones) {
-
             const fila = btn.closest("tr");
-
             if (!fila) continue;
+            const nombreFila = fila.innerText.split("\n")[0].trim().toUpperCase();
 
-            const nombreFila =
-                fila.innerText
-                .split("\n")[0]
-                .trim()
-                .toUpperCase();
-
-            if (
-                !ALUMNOS_PROCESADOS.includes(
-                    nombreFila
-                )
-            ) {
-
-                console.log(
-                    "🖱️ ABRIENDO:",
-                    nombreFila
-                );
-
-                encontrado = true;
-
-                btn.click();
-
-                setTimeout(() => {
-                    ejecutarAcompanamiento();
-                }, 7000);
-
-                break;
+            if (!ALUMNOS_PROCESADOS.includes(nombreFila)) {
+                console.log("🖱️ SELECCIONANDO A:", nombreFila);
+                botonParaClic = btn;
+                break; 
             }
         }
 
-        if (!encontrado) {
-
-            console.log(
-                "🏁 TODOS PROCESADOS"
-            );
-
-            PROCESO_ACTIVO = false;
-
-            alert(
-                "✅ ACOMPAÑAMIENTO TERMINADO"
-            );
+        if (botonParaClic) {
+            botonParaClic.click();
+            // Esperamos a que cargue la ficha del alumno
+            await esperar(6000); 
+            return ejecutarAcompanamiento(); // Reintenta ya dentro de la ficha
+        } else {
+            alert("✅ ¡Todos los alumnos de esta página han sido procesados!");
+            return;
         }
-
-        return;
     }
 
-    // =========================================
-    // NOMBRE ALUMNO
-    // =========================================
+    // --- ESCENARIO B: YA ESTAMOS DENTRO DE LA FICHA DEL ALUMNO ---
+    const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
+    console.log("👨‍🎓 PROCESANDO A:", nombreAlumno);
 
-    const nombreAlumno =
-        alumnoAbierto.value
-        .trim()
-        .toUpperCase();
+    // 2. SELECCIONAR TRIMESTRE (Si no está seleccionado)
+    const comboTrimestre = document.querySelector('mat-select[formcontrolname*="trimestre"], mat-select[placeholder*="trimestre"]');
+    if (comboTrimestre && comboTrimestre.innerText.includes("Seleccione")) {
+        const tri = prompt(`Elija el TRIMESTRE para ${nombreAlumno} (1, 2 o 3):`, "2");
+        if (!tri) return; 
 
-    console.log(
-        "👨‍🎓 ALUMNO:",
-        nombreAlumno
-    );
+        comboTrimestre.click();
+        await esperar(1000);
+        const opciones = Array.from(document.querySelectorAll('mat-option'));
+        const miTri = opciones.find(o => o.innerText.includes(tri));
+        if (miTri) {
+            miTri.click();
+            await esperar(2000); // Esperar que carguen los casilleros de notas
+        }
+    }
 
-    // =========================================
-    // ESPERAR CARGA ANGULAR
-    // =========================================
-
-    await esperar(5000);
-
-    // =========================================
-    // BUSCAR NOTAS
-    // =========================================
-
-    const notas =
-        BASE_DATOS[nombreAlumno];
-
+    // 3. BUSCAR NOTAS EN BASE_DATOS
+    const notas = BASE_DATOS[nombreAlumno];
     if (!notas) {
-
-        console.log(
-            "⚠️ NO HAY NOTAS:",
-            nombreAlumno
-        );
-
-        ALUMNOS_PROCESADOS.push(
-            nombreAlumno
-        );
-
+        console.log("⚠️ SIN NOTAS PARA:", nombreAlumno);
+        ALUMNOS_PROCESADOS.push(nombreAlumno);
         volverLista();
-
         return;
     }
 
-    console.log(
-        "✅ NOTAS:",
-        notas
-    );
-
-    // =========================================
-    // MAPA
-    // =========================================
-
-    const mapa = {
-        "S": "SIEMPRE",
-        "F": "FRECUENTEMENTE",
-        "O": "OCASIONALMENTE",
-        "N": "NUNCA"
-    };
-
-    // =========================================
-    // SELECTS
-    // =========================================
-
-    const selects = Array.from(
-        document.querySelectorAll(
-            'mat-select, select'
-        )
-    );
-
-    console.log(
-        "🎯 SELECTS:",
-        selects.length
-    );
-
-    // =========================================
-    // LLENAR
-    // =========================================
+    // 4. LLENADO DE HABILIDADES (MAT-SELECTS)
+    const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+    // Filtramos para no tocar el select del trimestre otra vez
+    const selects = Array.from(document.querySelectorAll('mat-select')).filter(s => !s.innerText.includes("TRIMESTRE"));
 
     for (let i = 0; i < selects.length; i++) {
+        const notaLetra = (notas[i] || "").trim().toUpperCase();
+        const textoObjetivo = mapa[notaLetra];
 
-        const textoObjetivo =
-            mapa[
-                (notas[i] || "")
-                .trim()
-                .toUpperCase()
-            ];
+        if (textoObjetivo) {
+            selects[i].scrollIntoView({ block: "center" });
+            selects[i].click();
+            await esperar(600);
 
-        if (!textoObjetivo) continue;
-
-        const sel = selects[i];
-
-        // =====================================
-        // MAT SELECT
-        // =====================================
-
-        if (
-            sel.tagName
-            .toLowerCase()
-            === "mat-select"
-        ) {
-
-            sel.click();
-
-            await esperar(700);
-
-            const opciones = Array.from(
-                document.querySelectorAll(
-                    'mat-option'
-                )
-            );
-
-            const opcionCorrecta =
-                opciones.find(opt => {
-
-                    return (
-                        opt.innerText
-                        .trim()
-                        .toUpperCase()
-                        .includes(
-                            textoObjetivo
-                        )
-                    );
-
-                });
-
-            if (opcionCorrecta) {
-
-                opcionCorrecta.click();
-
-                console.log(
-                    "✅",
-                    textoObjetivo
-                );
-            }
-
-        }
-
-        // =====================================
-        // SELECT NORMAL
-        // =====================================
-
-        else {
-
-            for (
-                let opt of sel.options
-            ) {
-
-                if (
-                    opt.text
-                    .trim()
-                    .toUpperCase()
-                    .includes(
-                        textoObjetivo
-                    )
-                ) {
-
-                    sel.value = opt.value;
-
-                    [
-                        "input",
-                        "change",
-                        "blur"
-                    ].forEach(ev => {
-
-                        sel.dispatchEvent(
-                            new Event(ev, {
-                                bubbles: true
-                            })
-                        );
-
-                    });
-
-                    break;
-                }
+            const opciones = Array.from(document.querySelectorAll('mat-option'));
+            const optCorrecta = opciones.find(o => o.innerText.trim().toUpperCase().includes(textoObjetivo));
+            
+            if (optCorrecta) {
+                optCorrecta.click();
+                await esperar(300);
             }
         }
-
-        await esperar(500);
     }
 
-    // =========================================
-    // GUARDAR
-    // =========================================
-
-    const btnGuardar = Array.from(
-        document.querySelectorAll(
-            'button'
-        )
-    ).find(b => {
-
-        const t =
-            b.innerText
-            .trim()
-            .toUpperCase();
-
-        return (
-            t.includes("GUARDAR")
-        );
-
-    });
+    // 5. GUARDAR Y VOLVER
+    await esperar(1000);
+    const btnGuardar = Array.from(document.querySelectorAll('button')).find(b => 
+        b.innerText.toUpperCase().includes("GUARDAR")
+    );
 
     if (btnGuardar) {
-
-        console.log("💾 GUARDANDO");
-
-        try {
-
-            btnGuardar.click();
-
-        } catch (e) {
-
-            console.log(
-                "⚠️ ERROR ANGULAR IGNORADO"
-            );
-        }
-
+        console.log("💾 GUARDANDO...");
+        btnGuardar.click();
         await esperar(4000);
-
         cerrarPopups();
-
-        await esperar(2000);
-
-        ALUMNOS_PROCESADOS.push(
-            nombreAlumno
-        );
-
-        console.log(
-            "✅ GUARDADO:",
-            nombreAlumno
-        );
-
+        await esperar(1500);
+        
+        ALUMNOS_PROCESADOS.push(nombreAlumno);
         volverLista();
-
     } else {
-
-        console.log(
-            "❌ NO ENCONTRÉ GUARDAR"
-        );
-
+        console.log("❌ NO SE ENCONTRÓ BOTÓN GUARDAR");
         volverLista();
     }
 }
 
-// =====================================================
-// VOLVER
-// =====================================================
-
+// MANTÉN TUS FUNCIONES DE APOYO (volverLista, cerrarPopups, esperar) IGUAL
 function volverLista() {
-
-    const btnVolver = Array.from(
-        document.querySelectorAll(
-            'button'
-        )
-    ).find(b => {
-
-        const t =
-            b.innerText
-            .trim()
-            .toUpperCase();
-
-        return (
-            t.includes("VOLVER") ||
-            t.includes("REGRESAR") ||
-            t.includes("ATRÁS")
-        );
-
-    });
+    const btnVolver = Array.from(document.querySelectorAll('button')).find(b => 
+        ["VOLVER", "REGRESAR", "ATRÁS"].some(t => b.innerText.toUpperCase().includes(t))
+    );
 
     if (btnVolver) {
-
-        console.log("↩️ VOLVIENDO");
-
+        console.log("↩️ VOLVIENDO A LA LISTA...");
         btnVolver.click();
-
         setTimeout(() => {
-
-            ejecutarAcompanamiento();
-
-        }, 7000);
+            ejecutarAcompanamiento(); // Ciclo infinito hasta terminar la tabla
+        }, 6000);
     }
 }
 
-// =====================================================
-// POPUPS
-// =====================================================
-
 function cerrarPopups() {
-
-    Array.from(
-        document.querySelectorAll(
-            'button'
-        )
-    ).forEach(btn => {
-
-        const t =
-            btn.innerText
-            .trim()
-            .toUpperCase();
-
-        if (
-            t === "ACEPTAR" ||
-            t === "OK" ||
-            t === "SI" ||
-            t === "SÍ"
-        ) {
-
-            btn.click();
-        }
+    Array.from(document.querySelectorAll('button')).forEach(btn => {
+        const t = btn.innerText.trim().toUpperCase();
+        if (["ACEPTAR", "OK", "SI", "SÍ"].includes(t)) btn.click();
     });
 }
 
-// =====================================================
-// ESPERA
-// =====================================================
-
 function esperar(ms) {
-
-    return new Promise(r =>
-        setTimeout(r, ms)
-    );
+    return new Promise(r => setTimeout(r, ms));
 }
 
-// =====================================================
-// EXPORTAR
-// =====================================================
-
-window.motorAcompanamiento =
-    ejecutarAcompanamiento;
+window.motorAcompanamiento = ejecutarAcompanamiento;
     // --- 5. MOTOR INICIAL ---
     function motorInicial() {
         const filas = Array.from(document.querySelectorAll("tr")).filter(f => Array.from(f.querySelectorAll("button")).some(b => b.innerText.toUpperCase().includes("GUARDAR")));
