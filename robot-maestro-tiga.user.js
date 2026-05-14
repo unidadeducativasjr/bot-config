@@ -180,91 +180,101 @@ window.ALUMNOS_PROCESADOS = window.ALUMNOS_PROCESADOS || JSON.parse(sessionStora
 // Variable para recordar quién ya fue guardado con éxito
 window.LISTA_EXITO = window.LISTA_EXITO || JSON.parse(sessionStorage.getItem("TIGA_DONE") || "[]");
 
-async function ejecutarAcompanamiento() {
-    console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE");
+console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE Y ANTI-BLOQUEO");
 
-    const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
-    if (!alumnoAbierto) return;
+    try {
+        const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
 
-    const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
-    const notas = BASE_DATOS[nombreAlumno];
+        // --- ESCENARIO A: LISTA DE ALUMNOS ---
+        if (!alumnoAbierto) {
+            console.log("📋 Buscando alumno pendiente...");
+            const botones = Array.from(document.querySelectorAll("button")).filter(b => b.innerText.includes("Seleccionar"));
+            for (let btn of botones) {
+                const nombre = btn.closest("tr").innerText.split("\n")[0].trim().toUpperCase();
+                if (typeof ALUMNOS_PROCESADOS !== 'undefined' && !ALUMNOS_PROCESADOS.includes(nombre)) {
+                    btn.click();
+                    return;
+                }
+            }
+            return;
+        }
 
-    if (!notas) {
-        console.warn("⚠️ Sin notas para:", nombreAlumno);
-        return;
-    }
+        // --- ESCENARIO B: DENTRO DE LA FICHA ---
+        const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
+        const notas = BASE_DATOS[nombreAlumno];
 
-    // 1. OBTENER SELECTS DE HABILIDADES
-    let selectsNotas = Array.from(document.querySelectorAll('mat-select')).filter(s => 
-        !s.getAttribute('formcontrolname')?.includes('trimestre') && 
-        !s.innerText.includes("TRIMESTRE")
-    );
+        if (!notas) {
+            console.error("❌ No hay notas para:", nombreAlumno);
+            return;
+        }
 
-    const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+        // Espera para evitar el error de 'filter'
+        await new Promise(r => setTimeout(r, 2000));
 
-    // 2. PROCESO DE LLENADO CON DISPARO DE EVENTOS
-    for (let i = 0; i < selectsNotas.length; i++) {
-        const textoObjetivo = mapa[notas[i]?.trim().toUpperCase()];
+        let selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
+            !s.innerText.includes("TRIMESTRE") && !s.getAttribute('formcontrolname')?.includes('trimestre')
+        );
 
-        if (textoObjetivo) {
-            // Abrir el selector
-            selectsNotas[i].click();
-            await new Promise(r => setTimeout(r, 600));
+        if (selects.length === 0) {
+            console.log("⏳ Reintentando detectar cuadros...");
+            setTimeout(ejecutarAcompanamiento, 2000);
+            return;
+        }
 
-            // Buscar y seleccionar la opción
-            const opciones = Array.from(document.querySelectorAll('mat-option'));
-            const miOpcion = opciones.find(o => o.innerText.trim().toUpperCase().includes(textoObjetivo));
+        const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
 
-            if (miOpcion) {
-                miOpcion.click();
-                
-                // --- TRUCO CRÍTICO: Forzar a la página a reconocer el cambio ---
-                selectsNotas[i].dispatchEvent(new Event('change', { bubbles: true }));
-                selectsNotas[i].dispatchEvent(new Event('input', { bubbles: true }));
-                
-                await new Promise(r => setTimeout(r, 400));
+        for (let i = 0; i < selects.length; i++) {
+            const texto = mapa[notas[i]?.trim().toUpperCase()];
+            if (texto && (selects[i].innerText.includes("Seleccione") || selects[i].innerText.trim() === "")) {
+                selects[i].click();
+                await new Promise(r => setTimeout(r, 700));
+                const opciones = Array.from(document.querySelectorAll('mat-option'));
+                const opt = opciones.find(o => o.innerText.trim().toUpperCase().includes(texto));
+                if (opt) {
+                    opt.click();
+                    // Esto obliga a la página a registrar el dato
+                    selects[i].dispatchEvent(new Event('change', { bubbles: true }));
+                    selects[i].dispatchEvent(new Event('blur', { bubbles: true }));
+                }
+                await new Promise(r => setTimeout(r, 500));
             }
         }
-    }
 
-   // 3. CLIC EN GUARDAR Y MANEJO DE CONFIRMACIÓN
-        console.log("💾 Ejecutando clic en Guardar Calificación...");
+        // --- EL CLIC EN EL BOTÓN AZUL DE CONFIRMACIÓN ---
+        console.log("💾 Guardando...");
         const btnGuardarVerde = document.querySelector('button.btn-success, .mat-success');
-        
         if (btnGuardarVerde) {
             btnGuardarVerde.click();
             
-            // ESPERA A QUE APAREZCA EL CUADRO DE "CONFIRMAR" (Como el de tu foto)
-            await new Promise(r => setTimeout(r, 1500)); 
+            // Esperar al cuadro azul "¿Desea Guardar?"
+            await new Promise(r => setTimeout(r, 2000)); 
 
-            // BUSCAMOS EL BOTÓN AZUL DE "GUARDAR" DENTRO DEL CUADRO DE DIÁLOGO
-            const botonesConfirmar = Array.from(document.querySelectorAll('button, a'));
-            const btnConfirmarAzul = botonesConfirmar.find(b => 
+            const btnConfirmarAzul = Array.from(document.querySelectorAll('button')).find(b => 
                 b.innerText.toUpperCase().includes("GUARDAR") && 
-                (b.classList.contains('btn-primary') || b.style.backgroundColor.includes('rgb(51, 122, 183)') || b.outerHTML.includes('blue'))
+                (b.classList.contains('btn-primary') || b.outerHTML.includes('blue'))
             );
 
             if (btnConfirmarAzul) {
-                console.log("✅ Cuadro de confirmación detectado. Haciendo clic en el botón azul...");
+                console.log("🔵 Confirmando en el cuadro azul...");
                 btnConfirmarAzul.click();
-            } else {
-                // Si el botón no se encuentra por texto, intentamos por la posición del cuadro
-                console.log("⚠️ No se halló el botón por texto, intentando clic forzado en el diálogo...");
-                const dialogBtn = document.querySelector('.swal2-confirm, .btn-primary');
-                if (dialogBtn) dialogBtn.click();
+                await new Promise(r => setTimeout(r, 5000));
+
+                // Cerrar popup de "Éxito" o "Error"
+                const btnOk = Array.from(document.querySelectorAll('button')).find(b => 
+                    ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
+                );
+                if (btnOk) btnOk.click();
+
+                // Intentar volver a la lista
+                const btnVolver = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Volver"));
+                if (btnVolver) btnVolver.click();
             }
-
-            // Esperamos a que el servidor procese
-            console.log("⏳ Esperando respuesta final del servidor...");
-            await new Promise(r => setTimeout(r, 5000));
-
-            // CERRAR EL MENSAJE DE "OPERACIÓN EXITOSA"
-            const btnAceptarFinal = Array.from(document.querySelectorAll('button')).find(b => 
-                ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
-            );
-            if (btnAceptarFinal) btnAceptarFinal.click();
         }
-}
+
+    } catch (err) {
+        console.log("🔄 Error recuperado, reintentando...", err.message);
+        setTimeout(ejecutarAcompanamiento, 3000);
+    }
     // --- 5. MOTOR INICIAL ---
     function motorInicial() {
         const filas = Array.from(document.querySelectorAll("tr")).filter(f => Array.from(f.querySelectorAll("button")).some(b => b.innerText.toUpperCase().includes("GUARDAR")));
