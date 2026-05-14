@@ -227,19 +227,43 @@ async function ejecutarAcompanamiento() {
         }
     }
 
-    // 3. GUARDADO CON VALIDACIÓN
-    console.log("📝 Verificando campos antes de guardar...");
-    const btnGuardar = document.querySelector('button.btn-success, .mat-success');
-    
-    if (btnGuardar) {
-        btnGuardar.scrollIntoView({ block: "center" });
-        await new Promise(r => setTimeout(r, 500));
-        btnGuardar.click();
+   // 3. CLIC EN GUARDAR Y MANEJO DE CONFIRMACIÓN
+        console.log("💾 Ejecutando clic en Guardar Calificación...");
+        const btnGuardarVerde = document.querySelector('button.btn-success, .mat-success');
         
-        console.log("💾 Clic en Guardar realizado. Esperando confirmación...");
-        // Espera de 5 segundos para que el servidor responda antes de hacer cualquier otra cosa
-        await new Promise(r => setTimeout(r, 5000));
-    }
+        if (btnGuardarVerde) {
+            btnGuardarVerde.click();
+            
+            // ESPERA A QUE APAREZCA EL CUADRO DE "CONFIRMAR" (Como el de tu foto)
+            await new Promise(r => setTimeout(r, 1500)); 
+
+            // BUSCAMOS EL BOTÓN AZUL DE "GUARDAR" DENTRO DEL CUADRO DE DIÁLOGO
+            const botonesConfirmar = Array.from(document.querySelectorAll('button, a'));
+            const btnConfirmarAzul = botonesConfirmar.find(b => 
+                b.innerText.toUpperCase().includes("GUARDAR") && 
+                (b.classList.contains('btn-primary') || b.style.backgroundColor.includes('rgb(51, 122, 183)') || b.outerHTML.includes('blue'))
+            );
+
+            if (btnConfirmarAzul) {
+                console.log("✅ Cuadro de confirmación detectado. Haciendo clic en el botón azul...");
+                btnConfirmarAzul.click();
+            } else {
+                // Si el botón no se encuentra por texto, intentamos por la posición del cuadro
+                console.log("⚠️ No se halló el botón por texto, intentando clic forzado en el diálogo...");
+                const dialogBtn = document.querySelector('.swal2-confirm, .btn-primary');
+                if (dialogBtn) dialogBtn.click();
+            }
+
+            // Esperamos a que el servidor procese
+            console.log("⏳ Esperando respuesta final del servidor...");
+            await new Promise(r => setTimeout(r, 5000));
+
+            // CERRAR EL MENSAJE DE "OPERACIÓN EXITOSA"
+            const btnAceptarFinal = Array.from(document.querySelectorAll('button')).find(b => 
+                ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
+            );
+            if (btnAceptarFinal) btnAceptarFinal.click();
+        }
 }
     // --- 5. MOTOR INICIAL ---
     function motorInicial() {
