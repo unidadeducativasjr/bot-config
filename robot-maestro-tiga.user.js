@@ -401,38 +401,6 @@ console.log(
         }
     }
 }
-let selects = [];
-
-for (let intento = 0; intento < 15; intento++) {
-
-    selects = Array.from(
-
-        document.querySelectorAll(
-            'mat-select, div.mat-select-trigger'
-        )
-
-    ).filter(el => {
-
-        return (
-            el.offsetParent !== null
-        );
-
-    });
-
-    if (selects.length > 3) break;
-
-    console.log(
-        "⏳ ESPERANDO CONTROLES...",
-        intento + 1
-    );
-
-    await esperar(1000);
-}
-
-console.log(
-    "🎯 SELECTS DETECTADOS:",
-    selects.length
-);
 
 // =========================================
 // SI NO HAY CONTROLES
