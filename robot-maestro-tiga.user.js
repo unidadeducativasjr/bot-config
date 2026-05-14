@@ -349,28 +349,79 @@ for (let inp of posiblesInputs) {
 // SELECCIONAR TRIMESTRE AUTOMÁTICO
 // =========================================
 
-const selectorTrimestre = document.querySelector(
-    'mat-select'
+// =========================================
+// BUSCAR CAMPO TRIMESTRE REAL
+// =========================================
+
+const combos = Array.from(
+
+    document.querySelectorAll(
+        'div[role="combobox"]'
+    )
+
 );
+
+console.log(
+    "📅 COMBOS:",
+    combos.length
+);
+
+// NORMALMENTE EL SEGUNDO COMBO ES TRIMESTRE
+const selectorTrimestre = combos[1];
 
 if (selectorTrimestre) {
 
-    const valorActual =
-        selectorTrimestre.innerText
-        .trim();
+    console.log(
+        "📅 ABRIENDO TRIMESTRE"
+    );
 
-    if (
-        valorActual === "" ||
-        valorActual.includes("Seleccione")
-    ) {
+    selectorTrimestre.click();
 
-        console.log(
-            "📅 SELECCIONANDO TRIMESTRE"
+    await esperar(1500);
+
+    const opciones = Array.from(
+        document.querySelectorAll(
+            'mat-option, span'
+        )
+    );
+
+    const opcion = opciones.find(o => {
+
+        const txt =
+            o.innerText
+            .trim()
+            .toUpperCase();
+
+        return (
+            txt.includes("TRIMESTRE")
         );
 
-        selectorTrimestre.click();
+    });
 
-        await esperar(1000);
+    if (opcion) {
+
+        console.log(
+            "✅ SELECCIONANDO:",
+            opcion.innerText
+        );
+
+        opcion.click();
+
+        await esperar(5000);
+
+    } else {
+
+        console.log(
+            "❌ NO ENCONTRÉ OPCIÓN TRIMESTRE"
+        );
+    }
+
+} else {
+
+    console.log(
+        "❌ NO ENCONTRÉ COMBO TRIMESTRE"
+    );
+}
 
         const opciones = Array.from(
             document.querySelectorAll(
