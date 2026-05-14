@@ -342,24 +342,57 @@ for (let inp of posiblesInputs) {
     // SELECTS
     // =========================================
 
-    const selects = Array.from(
+    // =========================================
+// ESPERAR CONTROLES ANGULAR
+// =========================================
 
-    document.querySelectorAll(
-        'mat-select'
-    )
+let selects = [];
 
-).filter(sel => {
+for (let intento = 0; intento < 15; intento++) {
 
-    return (
-        sel.offsetParent !== null
+    selects = Array.from(
+
+        document.querySelectorAll(
+            'mat-select, div.mat-select-trigger'
+        )
+
+    ).filter(el => {
+
+        return (
+            el.offsetParent !== null
+        );
+
+    });
+
+    if (selects.length > 3) break;
+
+    console.log(
+        "⏳ ESPERANDO CONTROLES...",
+        intento + 1
     );
 
-});
+    await esperar(1000);
+}
 
 console.log(
-    "🎯 SELECTS REALES:",
+    "🎯 SELECTS DETECTADOS:",
     selects.length
 );
+
+// =========================================
+// SI NO HAY CONTROLES
+// =========================================
+
+if (selects.length === 0) {
+
+    console.log(
+        "❌ NO CARGARON CONTROLES"
+    );
+
+    volverLista();
+
+    return;
+}
 
     console.log(
         "🎯 SELECTS:",
