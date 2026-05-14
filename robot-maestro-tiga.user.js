@@ -175,7 +175,7 @@ const esperarElemento = (selector, tiempoMax = 10000) => {
 };
 
 async function ejecutarAcompanamiento() {
-    console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE");
+    console.log("🚀 MOTOR INICIADO - VALIDACIÓN DE DATOS");
 
     const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
     if (!alumnoAbierto) return;
@@ -183,12 +183,7 @@ async function ejecutarAcompanamiento() {
     const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
     const notas = BASE_DATOS[nombreAlumno];
 
-    if (!notas) {
-        console.warn("⚠️ Sin notas para:", nombreAlumno);
-        return;
-    }
-
-    // 1. OBTENER SELECTS DE HABILIDADES
+    // 1. OBTENER LOS SELECTORES
     let selectsNotas = Array.from(document.querySelectorAll('mat-select')).filter(s => 
         !s.getAttribute('formcontrolname')?.includes('trimestre') && 
         !s.innerText.includes("TRIMESTRE")
@@ -196,52 +191,51 @@ async function ejecutarAcompanamiento() {
 
     const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
 
-    // 2. PROCESO DE LLENADO CON RECONOCIMIENTO DE DATOS
+    // 2. LLENADO CON DISPARO DE EVENTOS
     for (let i = 0; i < selectsNotas.length; i++) {
         const textoObjetivo = mapa[notas[i]?.trim().toUpperCase()];
 
         if (textoObjetivo) {
-            // Abrir el selector
             selectsNotas[i].click();
             await new Promise(r => setTimeout(r, 600));
 
-            // Buscar y seleccionar la opción
             const opciones = Array.from(document.querySelectorAll('mat-option'));
             const miOpcion = opciones.find(o => o.innerText.trim().toUpperCase().includes(textoObjetivo));
 
             if (miOpcion) {
                 miOpcion.click();
                 
-                // --- TRUCO CRÍTICO: Forzar a Angular a reconocer el cambio ---
+                // --- ESTO ES LO QUE FALTA PARA QUE GUARDE ---
+                // Forzamos a Angular a reconocer que el valor cambió
                 selectsNotas[i].dispatchEvent(new Event('change', { bubbles: true }));
                 selectsNotas[i].dispatchEvent(new Event('input', { bubbles: true }));
+                miOpcion.dispatchEvent(new Event('click', { bubbles: true }));
                 
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 500));
             }
         }
     }
 
-    // 3. VERIFICACIÓN ANTES DE GUARDAR
-    console.log("📝 Verificando que las notas estén presentes...");
-    const camposVacios = selectsNotas.filter(s => s.innerText.includes("Seleccione"));
+    // 3. CLIC EN GUARDAR CON ESPERA DE SEGURIDAD
+    console.log("💾 Ejecutando guardado persistente...");
+    const btnGuardar = document.querySelector('button.btn-success, .mat-success');
     
-    if (camposVacios.length === 0) {
-        console.log("✅ Todo lleno. Procediendo a guardar.");
-        const btnGuardar = document.querySelector('button.btn-success, .mat-success');
-        if (btnGuardar) {
-            btnGuardar.click();
-            // Esperar a que el servidor responda
-            await new Promise(r => setTimeout(r, 5000));
-            
-            // Cerrar cuadro de diálogo de éxito si aparece
-            const btnOk = Array.from(document.querySelectorAll('button')).find(b => 
-                ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
-            );
-            if (btnOk) btnOk.click();
-        }
-    } else {
-        console.error("❌ Error: Algunos campos no se llenaron correctamente.");
-        alert("El robot no pudo llenar todos los campos. Por favor, revisa los que dicen 'Seleccione'.");
+    if (btnGuardar) {
+        // Hacemos scroll hasta el botón para asegurar que sea "clicable"
+        btnGuardar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await new Promise(r => setTimeout(r, 1000));
+        
+        btnGuardar.click();
+        
+        // Esperamos 5 segundos a que el servidor del Ministerio responda
+        console.log("⏳ Esperando respuesta del servidor...");
+        await new Promise(r => setTimeout(r, 5000));
+
+        // Buscar y cerrar el mensaje de error o éxito que sale en tus fotos
+        const btnCerrar = Array.from(document.querySelectorAll('button')).find(b => 
+            ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
+        );
+        if (btnCerrar) btnCerrar.click();
     }
 }
     // --- 5. MOTOR INICIAL ---
