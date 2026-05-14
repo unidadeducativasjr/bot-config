@@ -174,13 +174,8 @@ const esperarElemento = (selector, tiempoMax = 10000) => {
     });
 };
 
-// Variable global para evitar que el error de "undefined" detenga todo
-window.ALUMNOS_PROCESADOS = window.ALUMNOS_PROCESADOS || JSON.parse(sessionStorage.getItem("TIGA_PROCESADOS") || "[]");
-
-// Variable para recordar quién ya fue guardado con éxito
-window.LISTA_EXITO = window.LISTA_EXITO || JSON.parse(sessionStorage.getItem("TIGA_DONE") || "[]");
-
-console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE Y ANTI-BLOQUEO");
+async function ejecutarAcompanamiento() {
+    console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE Y ANTI-BLOQUEO");
 
     try {
         const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
@@ -190,8 +185,9 @@ console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE Y ANTI-BLOQUEO");
             console.log("📋 Buscando alumno pendiente...");
             const botones = Array.from(document.querySelectorAll("button")).filter(b => b.innerText.includes("Seleccionar"));
             for (let btn of botones) {
-                const nombre = btn.closest("tr").innerText.split("\n")[0].trim().toUpperCase();
-                if (typeof ALUMNOS_PROCESADOS !== 'undefined' && !ALUMNOS_PROCESADOS.includes(nombre)) {
+                const fila = btn.closest("tr");
+                const nombre = fila ? fila.innerText.split("\n")[0].trim().toUpperCase() : "";
+                if (nombre && typeof ALUMNOS_PROCESADOS !== 'undefined' && !ALUMNOS_PROCESADOS.includes(nombre)) {
                     btn.click();
                     return;
                 }
@@ -208,7 +204,7 @@ console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE Y ANTI-BLOQUEO");
             return;
         }
 
-        // Espera para evitar el error de 'filter'
+        // Espera necesaria para que Angular dibuje la tabla
         await new Promise(r => setTimeout(r, 2000));
 
         let selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
@@ -232,7 +228,6 @@ console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE Y ANTI-BLOQUEO");
                 const opt = opciones.find(o => o.innerText.trim().toUpperCase().includes(texto));
                 if (opt) {
                     opt.click();
-                    // Esto obliga a la página a registrar el dato
                     selects[i].dispatchEvent(new Event('change', { bubbles: true }));
                     selects[i].dispatchEvent(new Event('blur', { bubbles: true }));
                 }
@@ -240,18 +235,18 @@ console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE Y ANTI-BLOQUEO");
             }
         }
 
-        // --- EL CLIC EN EL BOTÓN AZUL DE CONFIRMACIÓN ---
+        // --- EL CLIC EN EL BOTÓN AZUL DE CONFIRMACIÓN (Imagen cb6e40) ---
         console.log("💾 Guardando...");
         const btnGuardarVerde = document.querySelector('button.btn-success, .mat-success');
         if (btnGuardarVerde) {
             btnGuardarVerde.click();
             
-            // Esperar al cuadro azul "¿Desea Guardar?"
+            // Esperamos al cuadro azul "¿Desea Guardar?"
             await new Promise(r => setTimeout(r, 2000)); 
 
             const btnConfirmarAzul = Array.from(document.querySelectorAll('button')).find(b => 
                 b.innerText.toUpperCase().includes("GUARDAR") && 
-                (b.classList.contains('btn-primary') || b.outerHTML.includes('blue'))
+                (b.classList.contains('btn-primary') || b.outerHTML.includes('blue') || b.classList.contains('swal2-confirm'))
             );
 
             if (btnConfirmarAzul) {
@@ -259,22 +254,27 @@ console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE Y ANTI-BLOQUEO");
                 btnConfirmarAzul.click();
                 await new Promise(r => setTimeout(r, 5000));
 
-                // Cerrar popup de "Éxito" o "Error"
+                // Registrar éxito (ajusta el nombre de tu variable de lista si es distinto)
+                if (typeof ALUMNOS_PROCESADOS !== 'undefined') {
+                    ALUMNOS_PROCESADOS.push(nombreAlumno);
+                }
+
+                // Cerrar popup final y volver
                 const btnOk = Array.from(document.querySelectorAll('button')).find(b => 
                     ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
                 );
                 if (btnOk) btnOk.click();
 
-                // Intentar volver a la lista
                 const btnVolver = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Volver"));
                 if (btnVolver) btnVolver.click();
             }
         }
 
     } catch (err) {
-        console.log("🔄 Error recuperado, reintentando...", err.message);
+        console.log("🔄 Error detectado, reintentando...", err.message);
         setTimeout(ejecutarAcompanamiento, 3000);
     }
+}
     // --- 5. MOTOR INICIAL ---
     function motorInicial() {
         const filas = Array.from(document.querySelectorAll("tr")).filter(f => Array.from(f.querySelectorAll("button")).some(b => b.innerText.toUpperCase().includes("GUARDAR")));
