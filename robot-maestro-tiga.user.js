@@ -174,68 +174,93 @@ const esperarElemento = (selector, tiempoMax = 10000) => {
     });
 };
 
+// Variable global para evitar que el error de "undefined" detenga todo
+window.ALUMNOS_PROCESADOS = window.ALUMNOS_PROCESADOS || JSON.parse(sessionStorage.getItem("TIGA_PROCESADOS") || "[]");
+
 async function ejecutarAcompanamiento() {
-    console.log("🚀 MOTOR INICIADO - VALIDACIÓN DE DATOS");
+    console.log("🚀 MOTOR INICIADO - MODO REINTENTO ACTIVO");
 
-    const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
-    if (!alumnoAbierto) return;
+    try {
+        const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
+        
+        // --- ESCENARIO A: LISTA DE ALUMNOS ---
+        if (!alumnoAbierto) {
+            const botones = Array.from(document.querySelectorAll("button")).filter(b => b.innerText.includes("Seleccionar"));
+            for (let btn of botones) {
+                const nombre = btn.closest("tr").innerText.split("\n")[0].trim().toUpperCase();
+                if (!window.ALUMNOS_PROCESADOS.includes(nombre)) {
+                    btn.click();
+                    return;
+                }
+            }
+            alert("✅ ¡Página completada!");
+            return;
+        }
 
-    const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
-    const notas = BASE_DATOS[nombreAlumno];
+        // --- ESCENARIO B: FICHA DEL ALUMNO ---
+        const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
+        const notas = BASE_DATOS[nombreAlumno];
 
-    // 1. OBTENER LOS SELECTORES
-    let selectsNotas = Array.from(document.querySelectorAll('mat-select')).filter(s => 
-        !s.getAttribute('formcontrolname')?.includes('trimestre') && 
-        !s.innerText.includes("TRIMESTRE")
-    );
+        if (!notas) {
+            console.error("❌ No hay notas para:", nombreAlumno);
+            return;
+        }
 
-    const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+        // 1. ESPERA DE SEGURIDAD PARA SELECTORES
+        let selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
+            !s.innerText.includes("TRIMESTRE") && !s.getAttribute('formcontrolname')?.includes('trimestre')
+        );
 
-    // 2. LLENADO CON DISPARO DE EVENTOS
-    for (let i = 0; i < selectsNotas.length; i++) {
-        const textoObjetivo = mapa[notas[i]?.trim().toUpperCase()];
+        if (selects.length === 0) {
+            console.log("⏳ Esperando que aparezcan las habilidades...");
+            setTimeout(ejecutarAcompanamiento, 2000); // Reintenta en 2 segundos
+            return;
+        }
 
-        if (textoObjetivo) {
-            selectsNotas[i].click();
-            await new Promise(r => setTimeout(r, 600));
+        // 2. LLENADO CON RECONOCIMIENTO DE ESTADO (Angular)
+        const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
 
-            const opciones = Array.from(document.querySelectorAll('mat-option'));
-            const miOpcion = opciones.find(o => o.innerText.trim().toUpperCase().includes(textoObjetivo));
-
-            if (miOpcion) {
-                miOpcion.click();
-                
-                // --- ESTO ES LO QUE FALTA PARA QUE GUARDE ---
-                // Forzamos a Angular a reconocer que el valor cambió
-                selectsNotas[i].dispatchEvent(new Event('change', { bubbles: true }));
-                selectsNotas[i].dispatchEvent(new Event('input', { bubbles: true }));
-                miOpcion.dispatchEvent(new Event('click', { bubbles: true }));
-                
-                await new Promise(r => setTimeout(r, 500));
+        for (let i = 0; i < selects.length; i++) {
+            const texto = mapa[notas[i]?.trim().toUpperCase()];
+            if (texto && selects[i].innerText.includes("Seleccione")) {
+                selects[i].click();
+                await new Promise(r => setTimeout(r, 600));
+                const opciones = Array.from(document.querySelectorAll('mat-option'));
+                const opt = opciones.find(o => o.innerText.trim().toUpperCase().includes(texto));
+                if (opt) {
+                    opt.click();
+                    // Disparar eventos para que la página NO ignore la nota
+                    selects[i].dispatchEvent(new Event('change', { bubbles: true }));
+                    selects[i].dispatchEvent(new Event('blur', { bubbles: true }));
+                }
+                await new Promise(r => setTimeout(r, 400));
             }
         }
-    }
 
-    // 3. CLIC EN GUARDAR CON ESPERA DE SEGURIDAD
-    console.log("💾 Ejecutando guardado persistente...");
-    const btnGuardar = document.querySelector('button.btn-success, .mat-success');
-    
-    if (btnGuardar) {
-        // Hacemos scroll hasta el botón para asegurar que sea "clicable"
-        btnGuardar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        await new Promise(r => setTimeout(r, 1000));
-        
-        btnGuardar.click();
-        
-        // Esperamos 5 segundos a que el servidor del Ministerio responda
-        console.log("⏳ Esperando respuesta del servidor...");
-        await new Promise(r => setTimeout(r, 5000));
+        // 3. GUARDADO AUTOMÁTICO
+        console.log("💾 Guardando...");
+        const btnGuardar = document.querySelector('button.btn-success, .mat-success');
+        if (btnGuardar) {
+            btnGuardar.click();
+            await new Promise(r => setTimeout(r, 5000)); // Espera respuesta del servidor
 
-        // Buscar y cerrar el mensaje de error o éxito que sale en tus fotos
-        const btnCerrar = Array.from(document.querySelectorAll('button')).find(b => 
-            ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
-        );
-        if (btnCerrar) btnCerrar.click();
+            // Cerrar cualquier popup (Error o Éxito)
+            const btnOk = Array.from(document.querySelectorAll('button')).find(b => 
+                ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
+            );
+            if (btnOk) btnOk.click();
+
+            // Registrar y volver
+            window.ALUMNOS_PROCESADOS.push(nombreAlumno);
+            sessionStorage.setItem("TIGA_PROCESADOS", JSON.stringify(window.ALUMNOS_PROCESADOS));
+            
+            const btnVolver = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Volver"));
+            if (btnVolver) btnVolver.click();
+        }
+
+    } catch (err) {
+        console.log("🔄 Error detectado, reintentando en 3s...", err.message);
+        setTimeout(ejecutarAcompanamiento, 3000);
     }
 }
     // --- 5. MOTOR INICIAL ---
