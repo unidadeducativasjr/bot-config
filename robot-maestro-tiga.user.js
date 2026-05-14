@@ -180,22 +180,24 @@ async function ejecutarAcompanamiento() {
     try {
         const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
 
-        // --- ESCENARIO A: LISTA DE ALUMNOS ---
+        // --- ESCENARIO A: LISTA DE ALUMNOS (Selección Automática) ---
         if (!alumnoAbierto) {
             console.log("📋 Buscando alumno pendiente...");
             const botones = Array.from(document.querySelectorAll("button")).filter(b => b.innerText.includes("Seleccionar"));
             for (let btn of botones) {
                 const fila = btn.closest("tr");
                 const nombre = fila ? fila.innerText.split("\n")[0].trim().toUpperCase() : "";
+                // Verifica si el alumno ya fue procesado para no repetirlo
                 if (nombre && typeof ALUMNOS_PROCESADOS !== 'undefined' && !ALUMNOS_PROCESADOS.includes(nombre)) {
                     btn.click();
                     return;
                 }
             }
+            alert("✅ ¡Página completada!");
             return;
         }
 
-        // --- ESCENARIO B: DENTRO DE LA FICHA ---
+        // --- ESCENARIO B: DENTRO DE LA FICHA DEL ALUMNO ---
         const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
         const notas = BASE_DATOS[nombreAlumno];
 
@@ -204,7 +206,7 @@ async function ejecutarAcompanamiento() {
             return;
         }
 
-        // Espera necesaria para que Angular dibuje la tabla
+        // Espera a que Angular cargue los cuadros de notas
         await new Promise(r => setTimeout(r, 2000));
 
         let selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
@@ -212,7 +214,7 @@ async function ejecutarAcompanamiento() {
         );
 
         if (selects.length === 0) {
-            console.log("⏳ Reintentando detectar cuadros...");
+            console.log("⏳ Reintentando detectar cuadros de notas...");
             setTimeout(ejecutarAcompanamiento, 2000);
             return;
         }
@@ -228,6 +230,7 @@ async function ejecutarAcompanamiento() {
                 const opt = opciones.find(o => o.innerText.trim().toUpperCase().includes(texto));
                 if (opt) {
                     opt.click();
+                    // Forzar el registro del dato en la plataforma
                     selects[i].dispatchEvent(new Event('change', { bubbles: true }));
                     selects[i].dispatchEvent(new Event('blur', { bubbles: true }));
                 }
@@ -235,31 +238,35 @@ async function ejecutarAcompanamiento() {
             }
         }
 
-        // --- EL CLIC EN EL BOTÓN AZUL DE CONFIRMACIÓN (Imagen cb6e40) ---
+        // --- PROCESO DE GUARDADO (Hacer clic en el cuadro azul de confirmación) ---
         console.log("💾 Guardando...");
         const btnGuardarVerde = document.querySelector('button.btn-success, .mat-success');
         if (btnGuardarVerde) {
             btnGuardarVerde.click();
             
-            // Esperamos al cuadro azul "¿Desea Guardar?"
+            // Esperamos a que aparezca el cuadro "¿Desea Guardar?"
             await new Promise(r => setTimeout(r, 2000)); 
 
+            // Buscamos el botón azul de "Guardar" en la ventana emergente
             const btnConfirmarAzul = Array.from(document.querySelectorAll('button')).find(b => 
                 b.innerText.toUpperCase().includes("GUARDAR") && 
-                (b.classList.contains('btn-primary') || b.outerHTML.includes('blue') || b.classList.contains('swal2-confirm'))
+                (b.classList.contains('btn-primary') || b.classList.contains('swal2-confirm'))
             );
 
             if (btnConfirmarAzul) {
-                console.log("🔵 Confirmando en el cuadro azul...");
+                console.log("🔵 Confirmando guardado en el cuadro azul...");
                 btnConfirmarAzul.click();
+                
+                // Esperamos respuesta del servidor
                 await new Promise(r => setTimeout(r, 5000));
 
-                // Registrar éxito (ajusta el nombre de tu variable de lista si es distinto)
+                // Registrar éxito para no repetir al alumno
                 if (typeof ALUMNOS_PROCESADOS !== 'undefined') {
                     ALUMNOS_PROCESADOS.push(nombreAlumno);
+                    sessionStorage.setItem("TIGA_PROCESADOS", JSON.stringify(ALUMNOS_PROCESADOS));
                 }
 
-                // Cerrar popup final y volver
+                // Cerrar cualquier mensaje de "Éxito" y volver
                 const btnOk = Array.from(document.querySelectorAll('button')).find(b => 
                     ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
                 );
