@@ -177,89 +177,105 @@ const esperarElemento = (selector, tiempoMax = 10000) => {
 // Variable global para evitar que el error de "undefined" detenga todo
 window.ALUMNOS_PROCESADOS = window.ALUMNOS_PROCESADOS || JSON.parse(sessionStorage.getItem("TIGA_PROCESADOS") || "[]");
 
+// Variable para recordar quién ya fue guardado con éxito
+window.LISTA_EXITO = window.LISTA_EXITO || JSON.parse(sessionStorage.getItem("TIGA_DONE") || "[]");
+
 async function ejecutarAcompanamiento() {
-    console.log("🚀 MOTOR INICIADO - MODO REINTENTO ACTIVO");
+    console.log("🛠️ MOTOR EN MODO SEGURO ACTIVO");
 
     try {
         const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
         
-        // --- ESCENARIO A: LISTA DE ALUMNOS ---
+        // --- ESCENARIO 1: LISTA PRINCIPAL ---
         if (!alumnoAbierto) {
+            console.log("📋 Buscando siguiente alumno pendiente...");
             const botones = Array.from(document.querySelectorAll("button")).filter(b => b.innerText.includes("Seleccionar"));
+            
             for (let btn of botones) {
                 const nombre = btn.closest("tr").innerText.split("\n")[0].trim().toUpperCase();
-                if (!window.ALUMNOS_PROCESADOS.includes(nombre)) {
+                if (!window.LISTA_EXITO.includes(nombre)) {
+                    console.log("🖱️ Entrando a:", nombre);
                     btn.click();
-                    return;
+                    return; 
                 }
             }
-            alert("✅ ¡Página completada!");
+            alert("✅ ¡Misión cumplida! Todos los alumnos de esta página procesados.");
             return;
         }
 
-        // --- ESCENARIO B: FICHA DEL ALUMNO ---
+        // --- ESCENARIO 2: DENTRO DE LA FICHA ---
         const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
         const notas = BASE_DATOS[nombreAlumno];
 
         if (!notas) {
-            console.error("❌ No hay notas para:", nombreAlumno);
+            console.warn("⚠️ No tengo notas para:", nombreAlumno);
             return;
         }
 
-        // 1. ESPERA DE SEGURIDAD PARA SELECTORES
+        // ESPERA CRÍTICA: Esperar a que los selectores existan para evitar el error 'filter'
+        await new Promise(r => setTimeout(r, 1500)); 
+        
         let selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
             !s.innerText.includes("TRIMESTRE") && !s.getAttribute('formcontrolname')?.includes('trimestre')
         );
 
         if (selects.length === 0) {
-            console.log("⏳ Esperando que aparezcan las habilidades...");
-            setTimeout(ejecutarAcompanamiento, 2000); // Reintenta en 2 segundos
+            console.log("⏳ Reintentando detectar campos de notas...");
+            setTimeout(ejecutarAcompanamiento, 2000);
             return;
         }
 
-        // 2. LLENADO CON RECONOCIMIENTO DE ESTADO (Angular)
         const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
 
+        // LLENADO CON CLIC HUMANO
         for (let i = 0; i < selects.length; i++) {
             const texto = mapa[notas[i]?.trim().toUpperCase()];
             if (texto && selects[i].innerText.includes("Seleccione")) {
+                selects[i].scrollIntoView({ block: "center" });
                 selects[i].click();
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 800));
+
                 const opciones = Array.from(document.querySelectorAll('mat-option'));
-                const opt = opciones.find(o => o.innerText.trim().toUpperCase().includes(texto));
-                if (opt) {
-                    opt.click();
-                    // Disparar eventos para que la página NO ignore la nota
+                const miOpt = opciones.find(o => o.innerText.trim().toUpperCase().includes(texto));
+
+                if (miOpt) {
+                    miOpt.click();
+                    // IMPORTANTE: Disparar eventos para que la plataforma "despierte"
                     selects[i].dispatchEvent(new Event('change', { bubbles: true }));
                     selects[i].dispatchEvent(new Event('blur', { bubbles: true }));
+                    await new Promise(r => setTimeout(r, 500));
                 }
-                await new Promise(r => setTimeout(r, 400));
             }
         }
 
-        // 3. GUARDADO AUTOMÁTICO
-        console.log("💾 Guardando...");
+        // GUARDADO CON VERIFICACIÓN DE POPUPS
+        console.log("💾 Iniciando guardado para:", nombreAlumno);
         const btnGuardar = document.querySelector('button.btn-success, .mat-success');
         if (btnGuardar) {
             btnGuardar.click();
-            await new Promise(r => setTimeout(r, 5000)); // Espera respuesta del servidor
+            await new Promise(r => setTimeout(r, 4000)); // Esperar respuesta del servidor
 
-            // Cerrar cualquier popup (Error o Éxito)
-            const btnOk = Array.from(document.querySelectorAll('button')).find(b => 
-                ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
+            // Buscar botones de "OK" o "CERRAR" en los mensajes de error/éxito
+            const btnCerrar = Array.from(document.querySelectorAll('button')).find(b => 
+                ["OK", "ACEPTAR", "CERRAR", "GUARDAR"].includes(b.innerText.toUpperCase().trim())
             );
-            if (btnOk) btnOk.click();
 
-            // Registrar y volver
-            window.ALUMNOS_PROCESADOS.push(nombreAlumno);
-            sessionStorage.setItem("TIGA_PROCESADOS", JSON.stringify(window.ALUMNOS_PROCESADOS));
+            if (btnCerrar) {
+                btnCerrar.click();
+                console.log("✅ Ventana cerrada automáticamente.");
+                await new Promise(r => setTimeout(r, 1000));
+            }
+
+            // Si llegamos aquí, registramos éxito y regresamos
+            window.LISTA_EXITO.push(nombreAlumno);
+            sessionStorage.setItem("TIGA_DONE", JSON.stringify(window.LISTA_EXITO));
             
             const btnVolver = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes("Volver"));
             if (btnVolver) btnVolver.click();
         }
 
     } catch (err) {
-        console.log("🔄 Error detectado, reintentando en 3s...", err.message);
+        console.error("🔄 Error de sistema recuperado:", err.message);
         setTimeout(ejecutarAcompanamiento, 3000);
     }
 }
