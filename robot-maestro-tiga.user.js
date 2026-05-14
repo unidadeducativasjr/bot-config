@@ -160,31 +160,18 @@ const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-confi
             else { filasProcesadasInicial = []; motorInicial(); }
         }
     }
-// =====================================================
-// ACOMPAÑAMIENTO AUTOMÁTICO - VERSIÓN FINAL ESTABLE
-// =====================================================
-
-let ALUMNOS_PROCESADOS = [];
-
 async function ejecutarAcompanamiento() {
     console.log("🚀 INICIANDO ACOMPAÑAMIENTO");
 
-    // 1. DETECTAR SI ESTAMOS EN TABLA O EN FICHA
+    // 1. IDENTIFICAR SI ESTAMOS EN LA TABLA O DENTRO DE UN ALUMNO
     const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
 
-    // --- ESCENARIO A: ESTAMOS EN LA LISTA DE ALUMNOS ---
+    // --- ESCENARIO: ESTAMOS EN LA LISTA (TABLA) ---
     if (!alumnoAbierto) {
-        console.log("📋 BUSCANDO ALUMNOS EN LA TABLA...");
-
-        // Buscamos los botones de la columna "Seleccionar"
+        console.log("📋 BUSCANDO ALUMNO EN TABLA...");
         const botones = Array.from(document.querySelectorAll("button")).filter(b => 
             b.innerText.toUpperCase().includes("SELECCIONAR")
         );
-
-        if (botones.length === 0) {
-            alert("🏁 No hay más alumnos o no estoy en la página correcta.");
-            return;
-        }
 
         let botonParaClic = null;
         for (let btn of botones) {
@@ -193,7 +180,6 @@ async function ejecutarAcompanamiento() {
             const nombreFila = fila.innerText.split("\n")[0].trim().toUpperCase();
 
             if (!ALUMNOS_PROCESADOS.includes(nombreFila)) {
-                console.log("🖱️ SELECCIONANDO A:", nombreFila);
                 botonParaClic = btn;
                 break; 
             }
@@ -201,48 +187,60 @@ async function ejecutarAcompanamiento() {
 
         if (botonParaClic) {
             botonParaClic.click();
-            // Esperamos a que cargue la ficha del alumno
-            await esperar(6000); 
-            return ejecutarAcompanamiento(); // Reintenta ya dentro de la ficha
-        } else {
-            alert("✅ ¡Todos los alumnos de esta página han sido procesados!");
-            return;
+            await esperar(5000); // Espera crucial para que Angular cargue la ficha
+            return ejecutarAcompanamiento(); // Reinicia para entrar al escenario de ficha
         }
+        return;
     }
 
-    // --- ESCENARIO B: YA ESTAMOS DENTRO DE LA FICHA DEL ALUMNO ---
+    // --- ESCENARIO: DENTRO DE LA FICHA DEL ALUMNO ---
     const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
     console.log("👨‍🎓 PROCESANDO A:", nombreAlumno);
 
-    // 2. SELECCIONAR TRIMESTRE (Si no está seleccionado)
+    // 2. GESTIÓN DEL TRIMESTRE (Crítico: Si no se elige, no aparecen los campos)
     const comboTrimestre = document.querySelector('mat-select[formcontrolname*="trimestre"], mat-select[placeholder*="trimestre"]');
-    if (comboTrimestre && comboTrimestre.innerText.includes("Seleccione")) {
-        const tri = prompt(`Elija el TRIMESTRE para ${nombreAlumno} (1, 2 o 3):`, "2");
+    
+    // Si el combo existe y aún dice "Seleccione", pedimos el dato
+    if (comboTrimestre && (comboTrimestre.innerText.includes("Seleccione") || comboTrimestre.innerText.trim() === "")) {
+        console.log("📅 PIDIENDO TRIMESTRE...");
+        const tri = prompt(`Elija el TRIMESTRE para ${nombreAlumno} (1 o 2):`, "2");
         if (!tri) return; 
 
         comboTrimestre.click();
         await esperar(1000);
         const opciones = Array.from(document.querySelectorAll('mat-option'));
         const miTri = opciones.find(o => o.innerText.includes(tri));
+        
         if (miTri) {
             miTri.click();
-            await esperar(2000); // Esperar que carguen los casilleros de notas
+            console.log("✅ Trimestre seleccionado. Esperando que aparezcan los campos de notas...");
+            await esperar(3000); // Espera a que el sistema cargue los campos de habilidades
         }
     }
 
-    // 3. BUSCAR NOTAS EN BASE_DATOS
+    // 3. VERIFICAR SI APARECIERON LOS CAMPOS DE NOTAS
+    let selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
+        !s.innerText.includes("TRIMESTRE") && !s.getAttribute('formcontrolname')?.includes('trimestre')
+    );
+
+    if (selects.length === 0) {
+        console.log("❌ NO SE ENCONTRARON CAMPOS DE NOTAS. REINTENTANDO ESPERA...");
+        await esperar(3000);
+        selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
+            !s.innerText.includes("TRIMESTRE") && !s.getAttribute('formcontrolname')?.includes('trimestre')
+        );
+    }
+
+    // 4. LLENADO DE NOTAS
     const notas = BASE_DATOS[nombreAlumno];
     if (!notas) {
-        console.log("⚠️ SIN NOTAS PARA:", nombreAlumno);
+        console.log("⚠️ SIN NOTAS EN BASE_DATOS PARA:", nombreAlumno);
         ALUMNOS_PROCESADOS.push(nombreAlumno);
         volverLista();
         return;
     }
 
-    // 4. LLENADO DE HABILIDADES (MAT-SELECTS)
     const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
-    // Filtramos para no tocar el select del trimestre otra vez
-    const selects = Array.from(document.querySelectorAll('mat-select')).filter(s => !s.innerText.includes("TRIMESTRE"));
 
     for (let i = 0; i < selects.length; i++) {
         const notaLetra = (notas[i] || "").trim().toUpperCase();
@@ -251,66 +249,31 @@ async function ejecutarAcompanamiento() {
         if (textoObjetivo) {
             selects[i].scrollIntoView({ block: "center" });
             selects[i].click();
-            await esperar(600);
+            await esperar(800);
 
             const opciones = Array.from(document.querySelectorAll('mat-option'));
             const optCorrecta = opciones.find(o => o.innerText.trim().toUpperCase().includes(textoObjetivo));
             
             if (optCorrecta) {
                 optCorrecta.click();
-                await esperar(300);
+                await esperar(400);
             }
         }
     }
 
-    // 5. GUARDAR Y VOLVER
-    await esperar(1000);
+    // 5. GUARDADO FINAL
     const btnGuardar = Array.from(document.querySelectorAll('button')).find(b => 
         b.innerText.toUpperCase().includes("GUARDAR")
     );
 
     if (btnGuardar) {
-        console.log("💾 GUARDANDO...");
         btnGuardar.click();
-        await esperar(4000);
+        await esperar(5000);
         cerrarPopups();
-        await esperar(1500);
-        
         ALUMNOS_PROCESADOS.push(nombreAlumno);
         volverLista();
-    } else {
-        console.log("❌ NO SE ENCONTRÓ BOTÓN GUARDAR");
-        volverLista();
     }
 }
-
-// MANTÉN TUS FUNCIONES DE APOYO (volverLista, cerrarPopups, esperar) IGUAL
-function volverLista() {
-    const btnVolver = Array.from(document.querySelectorAll('button')).find(b => 
-        ["VOLVER", "REGRESAR", "ATRÁS"].some(t => b.innerText.toUpperCase().includes(t))
-    );
-
-    if (btnVolver) {
-        console.log("↩️ VOLVIENDO A LA LISTA...");
-        btnVolver.click();
-        setTimeout(() => {
-            ejecutarAcompanamiento(); // Ciclo infinito hasta terminar la tabla
-        }, 6000);
-    }
-}
-
-function cerrarPopups() {
-    Array.from(document.querySelectorAll('button')).forEach(btn => {
-        const t = btn.innerText.trim().toUpperCase();
-        if (["ACEPTAR", "OK", "SI", "SÍ"].includes(t)) btn.click();
-    });
-}
-
-function esperar(ms) {
-    return new Promise(r => setTimeout(r, ms));
-}
-
-window.motorAcompanamiento = ejecutarAcompanamiento;
     // --- 5. MOTOR INICIAL ---
     function motorInicial() {
         const filas = Array.from(document.querySelectorAll("tr")).filter(f => Array.from(f.querySelectorAll("button")).some(b => b.innerText.toUpperCase().includes("GUARDAR")));
