@@ -175,80 +175,73 @@ const esperarElemento = (selector, tiempoMax = 10000) => {
 };
 
 async function ejecutarAcompanamiento() {
-    console.log("🚀 MOTOR INICIADO");
+    console.log("🚀 MOTOR INICIADO - MODO PERSISTENTE");
 
     const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
+    if (!alumnoAbierto) return;
 
-    // --- ESCENARIO: TABLA DE ALUMNOS ---
-    if (!alumnoAbierto) {
-        const botones = Array.from(document.querySelectorAll("button")).filter(b => b.innerText.includes("Seleccionar"));
-        for (let btn of botones) {
-            const nombre = btn.closest("tr").innerText.split("\n")[0].trim().toUpperCase();
-            if (!ALUMNOS_PROCESADOS.includes(nombre)) {
-                btn.click();
-                return; // El script se recargará al entrar al alumno
-            }
-        }
+    const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
+    const notas = BASE_DATOS[nombreAlumno];
+
+    if (!notas) {
+        console.warn("⚠️ Sin notas para:", nombreAlumno);
         return;
     }
 
-    // --- ESCENARIO: FICHA DEL ALUMNO ---
-    const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
-    
-    // 1. FORZAR SELECCIÓN DE TRIMESTRE
-    const comboTri = document.querySelector('mat-select[formcontrolname*="trimestre"]');
-    if (comboTri && (comboTri.innerText.includes("Seleccione") || comboTri.innerText.trim() === "")) {
-        const tri = prompt("Trimestre (1 o 2):", "2");
-        if (!tri) return;
-        
-        comboTri.click();
-        await new Promise(r => setTimeout(r, 1000));
-        const opciones = Array.from(document.querySelectorAll('mat-option'));
-        const miTri = opciones.find(o => o.innerText.includes(tri));
-        if (miTri) {
-            miTri.click();
-            console.log("📅 Trimestre seleccionado. Esperando carga de habilidades...");
-            // ESPERA ACTIVA: No continúa hasta que aparezcan los otros mat-select
-            await esperarElemento('mat-select'); 
-            await new Promise(r => setTimeout(r, 2000)); // Margen extra de seguridad
-        }
-    }
-
-    // 2. BUSCAR SELECTS DE NOTAS (Filtrando el de trimestre)
-    let todosLosSelects = Array.from(document.querySelectorAll('mat-select'));
-    let selectsNotas = todosLosSelects.filter(s => 
+    // 1. OBTENER SELECTS DE HABILIDADES
+    let selectsNotas = Array.from(document.querySelectorAll('mat-select')).filter(s => 
         !s.getAttribute('formcontrolname')?.includes('trimestre') && 
         !s.innerText.includes("TRIMESTRE")
     );
 
-    console.log(`📊 Campos encontrados: ${selectsNotas.length}`);
+    const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
 
-    const notas = BASE_DATOS[nombreAlumno];
-    if (notas && selectsNotas.length > 0) {
-        const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
-        
-        for (let i = 0; i < selectsNotas.length; i++) {
-            const valorExcel = notas[i]?.trim().toUpperCase();
-            const textoBuscar = mapa[valorExcel];
+    // 2. PROCESO DE LLENADO CON RECONOCIMIENTO DE DATOS
+    for (let i = 0; i < selectsNotas.length; i++) {
+        const textoObjetivo = mapa[notas[i]?.trim().toUpperCase()];
 
-            if (textoBuscar) {
-                selectsNotas[i].scrollIntoView({ block: "center" });
-                selectsNotas[i].click();
-                await new Promise(r => setTimeout(r, 800));
+        if (textoObjetivo) {
+            // Abrir el selector
+            selectsNotas[i].click();
+            await new Promise(r => setTimeout(r, 600));
+
+            // Buscar y seleccionar la opción
+            const opciones = Array.from(document.querySelectorAll('mat-option'));
+            const miOpcion = opciones.find(o => o.innerText.trim().toUpperCase().includes(textoObjetivo));
+
+            if (miOpcion) {
+                miOpcion.click();
                 
-                const opciones = Array.from(document.querySelectorAll('mat-option'));
-                const opt = opciones.find(o => o.innerText.trim().toUpperCase() === textoBuscar);
-                if (opt) opt.click();
+                // --- TRUCO CRÍTICO: Forzar a Angular a reconocer el cambio ---
+                selectsNotas[i].dispatchEvent(new Event('change', { bubbles: true }));
+                selectsNotas[i].dispatchEvent(new Event('input', { bubbles: true }));
+                
                 await new Promise(r => setTimeout(r, 400));
             }
         }
     }
 
-    // 3. GUARDADO
-    const btnGuardar = document.querySelector('button.btn-success');
-    if (btnGuardar) {
-        console.log("💾 Guardando...");
-        btnGuardar.click();
+    // 3. VERIFICACIÓN ANTES DE GUARDAR
+    console.log("📝 Verificando que las notas estén presentes...");
+    const camposVacios = selectsNotas.filter(s => s.innerText.includes("Seleccione"));
+    
+    if (camposVacios.length === 0) {
+        console.log("✅ Todo lleno. Procediendo a guardar.");
+        const btnGuardar = document.querySelector('button.btn-success, .mat-success');
+        if (btnGuardar) {
+            btnGuardar.click();
+            // Esperar a que el servidor responda
+            await new Promise(r => setTimeout(r, 5000));
+            
+            // Cerrar cuadro de diálogo de éxito si aparece
+            const btnOk = Array.from(document.querySelectorAll('button')).find(b => 
+                ["OK", "ACEPTAR", "CERRAR"].includes(b.innerText.toUpperCase().trim())
+            );
+            if (btnOk) btnOk.click();
+        }
+    } else {
+        console.error("❌ Error: Algunos campos no se llenaron correctamente.");
+        alert("El robot no pudo llenar todos los campos. Por favor, revisa los que dicen 'Seleccione'.");
     }
 }
     // --- 5. MOTOR INICIAL ---
