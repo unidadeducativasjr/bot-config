@@ -160,123 +160,95 @@ const JSON_URL = "https://raw.githubusercontent.com/unidadeducativasjr/bot-confi
             else { filasProcesadasInicial = []; motorInicial(); }
         }
     }
-// =====================================================
-// NÚCLEO DE ACOMPAÑAMIENTO PERSISTENTE
-// =====================================================
-
-// Recuperamos la lista de procesados del navegador para que no se borre al recargar
-// Recuperamos la lista de procesados para que sobreviva a recargas
-let ALUMNOS_PROCESADOS = JSON.parse(sessionStorage.getItem("TIGA_PROCESADOS") || "[]");
+// Función auxiliar para esperar a que los elementos carguen en el DOM
+const esperarElemento = (selector, tiempoMax = 10000) => {
+    return new Promise((resolve) => {
+        const inicio = Date.now();
+        const intervalo = setInterval(() => {
+            const el = document.querySelectorAll(selector);
+            if (el.length > 1 || (Date.now() - inicio) > tiempoMax) {
+                clearInterval(intervalo);
+                resolve(Array.from(el));
+            }
+        }, 500);
+    });
+};
 
 async function ejecutarAcompanamiento() {
-    console.log("🚀 INICIANDO MOTOR DE ACOMPAÑAMIENTO");
+    console.log("🚀 MOTOR INICIADO");
 
     const alumnoAbierto = document.querySelector('input[readonly], .form-control[disabled]');
 
-    // --- ESCENARIO A: LISTA DE ALUMNOS (Si NO hay alumno abierto) ---
-    if (!alumnoAbierto) { 
-        console.log("📋 BUSCANDO ALUMNO PENDIENTE EN TABLA...");
-        
-        const botones = Array.from(document.querySelectorAll("button")).filter(b => 
-            b.innerText.toUpperCase().includes("SELECCIONAR")
-        );
-
-        let botonParaClic = null;
+    // --- ESCENARIO: TABLA DE ALUMNOS ---
+    if (!alumnoAbierto) {
+        const botones = Array.from(document.querySelectorAll("button")).filter(b => b.innerText.includes("Seleccionar"));
         for (let btn of botones) {
-            const fila = btn.closest("tr");
-            if (!fila) continue;
-            const nombreFila = fila.innerText.split("\n")[0].trim().toUpperCase();
-
-            if (!ALUMNOS_PROCESADOS.includes(nombreFila)) {
-                console.log("🖱️ SELECCIONANDO A:", nombreFila);
-                botonParaClic = btn;
-                break; 
+            const nombre = btn.closest("tr").innerText.split("\n")[0].trim().toUpperCase();
+            if (!ALUMNOS_PROCESADOS.includes(nombre)) {
+                btn.click();
+                return; // El script se recargará al entrar al alumno
             }
         }
-
-        if (botonParaClic) {
-            botonParaClic.click();
-            await new Promise(r => setTimeout(r, 6000)); 
-            return ejecutarAcompanamiento();
-        } else {
-            alert("✅ ¡Todos los alumnos de esta página han sido procesados!");
-            return;
-        }
+        return;
     }
 
-    // --- ESCENARIO B: DENTRO DE LA FICHA (Si alumnoAbierto es verdadero) ---
+    // --- ESCENARIO: FICHA DEL ALUMNO ---
     const nombreAlumno = alumnoAbierto.value.trim().toUpperCase();
-    console.log("👨‍🎓 PROCESANDO A:", nombreAlumno);
-
-    // 1. SELECCIONAR TRIMESTRE
-    // --- 1. SELECCIÓN DE TRIMESTRE CON CLIC FORZADO ---
-    const comboTri = document.querySelector('mat-select[formcontrolname*="trimestre"]');
     
+    // 1. FORZAR SELECCIÓN DE TRIMESTRE
+    const comboTri = document.querySelector('mat-select[formcontrolname*="trimestre"]');
     if (comboTri && (comboTri.innerText.includes("Seleccione") || comboTri.innerText.trim() === "")) {
-        const triSeleccionado = prompt(`Elija el TRIMESTRE para ${nombreAlumno} (1 o 2):`, "2");
-        if (!triSeleccionado) return;
-
-        console.log("🖱️ Forzando apertura de menú de trimestre...");
+        const tri = prompt("Trimestre (1 o 2):", "2");
+        if (!tri) return;
         
-        // Técnica de triple clic para asegurar que Angular reaccione
-        comboTri.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         comboTri.click();
-        comboTri.dispatchEvent(new Event('change', { bubbles: true }));
-
-        await new Promise(r => setTimeout(r, 1500)); // Espera a que las opciones aparezcan en el DOM
-
+        await new Promise(r => setTimeout(r, 1000));
         const opciones = Array.from(document.querySelectorAll('mat-option'));
-        const miOpcion = opciones.find(o => o.innerText.includes(triSeleccionado));
-        
-        if (miOpcion) {
-            console.log("✅ Opción encontrada, haciendo clic...");
-            miOpcion.click();
-            miOpcion.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-            
-            // ESPERA CRUCIAL: 4 segundos para que la página dibuje las filas de notas
-            console.log("⏳ Esperando que el sistema cargue las habilidades...");
-            await new Promise(r => setTimeout(r, 4000)); 
-        } else {
-            console.error("❌ No se encontró la opción de trimestre en el menú.");
+        const miTri = opciones.find(o => o.innerText.includes(tri));
+        if (miTri) {
+            miTri.click();
+            console.log("📅 Trimestre seleccionado. Esperando carga de habilidades...");
+            // ESPERA ACTIVA: No continúa hasta que aparezcan los otros mat-select
+            await esperarElemento('mat-select'); 
+            await new Promise(r => setTimeout(r, 2000)); // Margen extra de seguridad
         }
     }
 
-    // 2. LLENAR NOTAS
-    const notas = BASE_DATOS[nombreAlumno];
-    if (notas) {
-        const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
-        const selects = Array.from(document.querySelectorAll('mat-select')).filter(s => 
-            !s.innerText.includes("TRIMESTRE") && !s.getAttribute('formcontrolname')?.includes('trimestre')
-        );
+    // 2. BUSCAR SELECTS DE NOTAS (Filtrando el de trimestre)
+    let todosLosSelects = Array.from(document.querySelectorAll('mat-select'));
+    let selectsNotas = todosLosSelects.filter(s => 
+        !s.getAttribute('formcontrolname')?.includes('trimestre') && 
+        !s.innerText.includes("TRIMESTRE")
+    );
 
-        for (let i = 0; i < selects.length; i++) {
-            const texto = mapa[notas[i]?.trim().toUpperCase()];
-            if (texto) {
-                selects[i].click();
-                await new Promise(r => setTimeout(r, 700));
-                const opt = Array.from(document.querySelectorAll('mat-option')).find(o => o.innerText.includes(texto));
+    console.log(`📊 Campos encontrados: ${selectsNotas.length}`);
+
+    const notas = BASE_DATOS[nombreAlumno];
+    if (notas && selectsNotas.length > 0) {
+        const mapa = { "S": "SIEMPRE", "F": "FRECUENTEMENTE", "O": "OCASIONALMENTE", "N": "NUNCA" };
+        
+        for (let i = 0; i < selectsNotas.length; i++) {
+            const valorExcel = notas[i]?.trim().toUpperCase();
+            const textoBuscar = mapa[valorExcel];
+
+            if (textoBuscar) {
+                selectsNotas[i].scrollIntoView({ block: "center" });
+                selectsNotas[i].click();
+                await new Promise(r => setTimeout(r, 800));
+                
+                const opciones = Array.from(document.querySelectorAll('mat-option'));
+                const opt = opciones.find(o => o.innerText.trim().toUpperCase() === textoBuscar);
                 if (opt) opt.click();
                 await new Promise(r => setTimeout(r, 400));
             }
         }
     }
 
-    // 3. GUARDAR Y VOLVER
-    const btnGuardar = document.querySelector('button.btn-success, .mat-success');
+    // 3. GUARDADO
+    const btnGuardar = document.querySelector('button.btn-success');
     if (btnGuardar) {
+        console.log("💾 Guardando...");
         btnGuardar.click();
-        await new Promise(r => setTimeout(r, 5000));
-        
-        // Registrar procesado
-        ALUMNOS_PROCESADOS.push(nombreAlumno);
-        sessionStorage.setItem("TIGA_PROCESADOS", JSON.stringify(ALUMNOS_PROCESADOS));
-        
-        // Volver a lista
-        const btnVolver = Array.from(document.querySelectorAll('button')).find(b => b.innerText.toUpperCase().includes("VOLVER"));
-        if (btnVolver) {
-            btnVolver.click();
-            setTimeout(() => ejecutarAcompanamiento(), 6000);
-        }
     }
 }
     // --- 5. MOTOR INICIAL ---
