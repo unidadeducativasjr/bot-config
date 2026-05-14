@@ -353,75 +353,26 @@ for (let inp of posiblesInputs) {
 // BUSCAR CAMPO TRIMESTRE REAL
 // =========================================
 
-const combos = Array.from(
+// =========================================
+// ESPERAR QUE ANGULAR CARGUE
+// =========================================
 
+await esperar(5000);
+
+// =========================================
+// SELECTS
+// =========================================
+
+const selects = Array.from(
     document.querySelectorAll(
-        'div[role="combobox"]'
+        'mat-select, select'
     )
-
 );
 
 console.log(
-    "📅 COMBOS:",
-    combos.length
+    "🎯 SELECTS:",
+    selects.length
 );
-
-// NORMALMENTE EL SEGUNDO COMBO ES TRIMESTRE
-const selectorTrimestre = combos[1];
-
-if (selectorTrimestre) {
-
-    console.log(
-        "📅 ABRIENDO TRIMESTRE"
-    );
-
-    selectorTrimestre.click();
-
-    await esperar(1500);
-
-    const opciones = Array.from(
-        document.querySelectorAll(
-            'mat-option, span'
-        )
-    );
-
-    const opcion = opciones.find(o => {
-
-        const txt =
-            o.innerText
-            .trim()
-            .toUpperCase();
-
-        return (
-            txt.includes("TRIMESTRE")
-        );
-
-    });
-
-    if (opcion) {
-
-        console.log(
-            "✅ SELECCIONANDO:",
-            opcion.innerText
-        );
-
-        opcion.click();
-
-        await esperar(5000);
-
-    } else {
-
-        console.log(
-            "❌ NO ENCONTRÉ OPCIÓN TRIMESTRE"
-        );
-    }
-
-} else {
-
-    console.log(
-        "❌ NO ENCONTRÉ COMBO TRIMESTRE"
-    );
-}
 
         const opciones = Array.from(
             document.querySelectorAll(
