@@ -345,7 +345,60 @@ for (let inp of posiblesInputs) {
     // =========================================
 // ESPERAR CONTROLES ANGULAR
 // =========================================
+// =========================================
+// SELECCIONAR TRIMESTRE AUTOMÁTICO
+// =========================================
 
+const selectorTrimestre = document.querySelector(
+    'mat-select'
+);
+
+if (selectorTrimestre) {
+
+    const valorActual =
+        selectorTrimestre.innerText
+        .trim();
+
+    if (
+        valorActual === "" ||
+        valorActual.includes("Seleccione")
+    ) {
+
+        console.log(
+            "📅 SELECCIONANDO TRIMESTRE"
+        );
+
+        selectorTrimestre.click();
+
+        await esperar(1000);
+
+        const opciones = Array.from(
+            document.querySelectorAll(
+                'mat-option'
+            )
+        );
+
+        const opcionTrimestre =
+            opciones.find(o => {
+
+                return (
+                    o.innerText.includes("TRIMESTRE")
+                );
+
+            });
+
+        if (opcionTrimestre) {
+
+            opcionTrimestre.click();
+
+            console.log(
+                "✅ TRIMESTRE SELECCIONADO"
+            );
+
+            await esperar(4000);
+        }
+    }
+}
 let selects = [];
 
 for (let intento = 0; intento < 15; intento++) {
